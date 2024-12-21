@@ -408,6 +408,6 @@ CMakecache.txt
 Makefile
 .cmake/
 Testing/
-.nina*
+.ninja*
 build.ninja
 .idea/
