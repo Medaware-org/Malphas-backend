@@ -403,6 +403,7 @@ FodyWeavers.xsd
 CMakeFiles/
 cmake_install.cmake
 malphas-backend
+malphas
 CMakecache.txt
 Makefile
 .cmake/
