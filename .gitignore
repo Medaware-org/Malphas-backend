@@ -412,3 +412,5 @@ Testing/
 .ninja_log
 build.ninja
 .idea/
+
+vcpkg_installed/
