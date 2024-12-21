@@ -13,6 +13,7 @@ const char *banner = "  __  __       _       _               \n"
 int main()
 {
         crow::SimpleApp app;
+        app.loglevel(crow::LogLevel::Info);
 
         std::cout << banner << std::endl;
 
