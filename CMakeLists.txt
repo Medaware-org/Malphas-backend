@@ -4,6 +4,9 @@ project(malphas)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY build)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY build)
+
 # Make the crow library directly #include-able
 include_directories(vendor/crow)
 

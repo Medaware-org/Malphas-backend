@@ -15,7 +15,7 @@ int main()
 {
         std::cout << banner << std::endl;
 
-        Database db = Database("root", "root", "db");
+        Database db = Database("malphas", "root", "malphas");
         if (!db.connect()) {
                 return 1;
         }
