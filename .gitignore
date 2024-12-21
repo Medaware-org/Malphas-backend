@@ -399,10 +399,11 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-# CMake
+# CMake & CLion
 CMakeFiles/
 cmake_install.cmake
 malphas-backend
 CMakecache.txt
 Makefile
 .cmake/
+Testing/
