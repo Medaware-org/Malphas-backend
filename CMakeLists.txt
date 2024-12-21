@@ -4,15 +4,23 @@ project(malphas)
 
 set(CMAKE_CXX_STANDARD 14)
 
+# Make the crow library directly #include-able
+include_directories(vendor/crow)
+
+# This provides the database connection utilities
+find_package(PostgreSQL REQUIRED)
+include_directories(${PostgreSQL_INCLUDE_DIRS})
+
 # Locate the ASIO dev headers (only on UNIX systems!)
 if (UNIX)
     find_path(ASIO_INCLUDE_DIR asio.hpp)
     if (ASIO_INCLUDE_DIR)
         message("Successfully located the ASIO library.\n")
-        include_directories(vendor/crow ${ASIO_INCLUDE_DIR})
+        include_directories(malphas ${ASIO_INCLUDE_DIR})
     else ()
         message(FATAL_ERROR "Could not find the ASIO library")
     endif ()
 endif ()
 
-add_executable(malphas-backend src/Main.cpp)
+add_executable(malphas src/Main.cpp)
+target_link_libraries(malphas ${PostgreSQL_LIBRARIES})
