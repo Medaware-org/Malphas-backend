@@ -1,3 +1,4 @@
+#include <Database.h>
 #include <crow_all.h>
 #include <iostream>
 
@@ -12,10 +13,15 @@ const char *banner = "  __  __       _       _               \n"
 
 int main()
 {
+        std::cout << banner << std::endl;
+
+        Database db = Database("root", "root", "db");
+        if (!db.connect()) {
+                return 1;
+        }
+
         crow::SimpleApp app;
         app.loglevel(crow::LogLevel::Info);
-
-        std::cout << banner << std::endl;
 
         CROW_ROUTE(app, "/")([]() {
                 return "Hello world";

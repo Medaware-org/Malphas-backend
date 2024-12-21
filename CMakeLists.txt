@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 14)
 # Make the crow library directly #include-able
 include_directories(vendor/crow)
 
+# .. do the same for the headers in `include/`
+include_directories(include)
+
 # This provides the database connection utilities
 find_package(PostgreSQL REQUIRED)
 include_directories(${PostgreSQL_INCLUDE_DIRS})
@@ -22,5 +25,5 @@ if (UNIX)
     endif ()
 endif ()
 
-add_executable(malphas src/Main.cpp)
+add_executable(malphas src/Main.cpp src/Database.cpp)
 target_link_libraries(malphas ${PostgreSQL_LIBRARIES})
