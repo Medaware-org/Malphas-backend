@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.29)
+project(malphas-backend)
+set(CMAKE_CXX_STANDARD 14)
+include_directories(vendor/crow)
+add_executable(malphas-backend Main.cpp)
