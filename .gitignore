@@ -404,7 +404,7 @@ CMakeFiles/
 cmake_install.cmake
 malphas-backend
 malphas
-CMakecache.txt
+CMakeCache.txt
 Makefile
 .cmake/
 Testing/
@@ -413,4 +413,5 @@ Testing/
 build.ninja
 .idea/
 
+# VCPKG
 vcpkg_installed/
