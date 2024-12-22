@@ -220,17 +220,15 @@ std::string Config::operator[](const char *path)
 bool Config::read_file()
 {
         FILE *fd;
+#define ERR { CROW_LOG_CRITICAL << "Could not open config file: " << this->path; return false; }
 #if defined(_WIN32)
-        fopen_s(&fd, this->path, "r");
+        if (fopen_s(&fd, this->path, "r") != 0) ERR
 #else
         fd = fopen(this->path, "r");
+        if (!fd) ERR
 #endif
+#undef ERR
         unsigned int size;
-
-        if (!fd) {
-                CROW_LOG_CRITICAL << "Could not open config file: " << this->path;
-                return false;
-        }
 
 
         fseek(fd, 0, SEEK_END);
