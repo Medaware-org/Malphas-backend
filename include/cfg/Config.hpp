@@ -21,7 +21,7 @@ class Config {
         unsigned int buff_len;
         bool parsed;
     private:
-        std::map<std::string, std::function<bool(std::string)>> required;
+        std::unordered_map<std::string, std::function<bool(std::string)>> required;
     public:
         Config(const char *path);
 

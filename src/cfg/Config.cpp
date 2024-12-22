@@ -180,7 +180,7 @@ bool Config::validate()
 {
         bool ok = true;
 
-        std::map<std::string, bool> statuses;
+        std::unordered_map<std::string, bool> statuses;
         for (auto &[key, value]: required)
                 statuses[key] = false;
         std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop &prop) {
