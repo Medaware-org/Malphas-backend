@@ -416,3 +416,6 @@ build/
 
 # VCPKG
 vcpkg_installed/
+
+# Malphas
+gen_dao
