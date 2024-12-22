@@ -30,8 +30,8 @@ public:
 
 	~Config();
 
-	void add_required(std::string str);
-	void add_required(std::string str, std::function<bool(std::string)> validation);
+	void add_required(const std::string& str);
+	void add_required(const std::string& str, std::function<bool(std::string)> validation);
 
 	bool parse();
 

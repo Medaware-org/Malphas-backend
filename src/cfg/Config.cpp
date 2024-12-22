@@ -13,12 +13,12 @@ Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
 {
 }
 
-void Config::add_required(std::string str)
+void Config::add_required(const std::string& str)
 {
-        add_required(str, [](std::string) { return true; });
+        add_required(str, [](const std::string&) { return true; });
 }
 
-void Config::add_required(std::string str, std::function<bool(std::string)> validation)
+void Config::add_required(const std::string& str, std::function<bool(std::string)> validation)
 {
         auto iter = required.find(str);
 
