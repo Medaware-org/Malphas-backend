@@ -28,20 +28,15 @@ int main()
                 if (error)
                         return;
 
-                if (prop.section == "database") {
-                        if (prop.key == "user")
-                                dst = &db_user;
-                        else if (prop.key == "password")
-                                dst = &db_password;
-                        else if (prop.key == "db")
-                                dst = &db_db;
-                        else {
-                                CROW_LOG_CRITICAL << "Unknown configuration property: " << prop.key;
-                                error = true;
-                                return;
-                        }
-                } else {
-                        CROW_LOG_CRITICAL << "Unknown config section: " << prop.section;
+                if (prop == "database.user")
+                        dst = &db_user;
+                else if (prop == "database.password")
+                        dst = &db_password;
+                else if (prop == "database.db")
+                        dst = &db_db;
+                else {
+                        CROW_LOG_CRITICAL << "Unknown configuration property: " << prop.section << "." << prop.key;
+                        error = true;
                         return;
                 }
 

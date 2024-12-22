@@ -3,6 +3,11 @@
 #include <crow_all.h>
 #include <cstdlib>
 
+bool cfg_prop::operator==(const char *path) const
+{
+        return path == (this->section + "." + this->key);
+}
+
 Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
 {
 }
