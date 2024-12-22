@@ -47,7 +47,7 @@ int parse_identifier(char **buff, std::string &dst)
 int parse_value(char **buff, std::string &dst)
 {
         int nLen = 0;
-        while (**buff != '\n') {
+        while (**buff != '\n' && **buff != '\0') {
                 dst.push_back(**buff);
                 (*buff)++;
                 nLen++;
@@ -69,6 +69,7 @@ bool Config::parse(std::function<void(cfg_prop &)> cb)
         // Temporary buffers
         std::string key;
         std::string value;
+        std::string section = "default";
 
         while (true) {
                 skip_spaces(&buffer);
@@ -87,6 +88,25 @@ bool Config::parse(std::function<void(cfg_prop &)> cb)
                 }
 
                 if (!c) break; // EOF
+
+                // Beginning of a section
+                if (c == '[') {
+                        buffer++;
+                        section.clear();
+                        if (parse_identifier(&buffer, section) <= 0) {
+                                CROW_LOG_CRITICAL << "Could not parse config section identifier starting with '"
+                                                  << (*buffer) << "'";
+                                return false;
+                        }
+                        c = *buffer;
+                        if (c != ']') {
+                                CROW_LOG_CRITICAL << "Expected ']' after section identifier \"" << section
+                                                  << "\", got '" << c << "'";
+                                return false;
+                        }
+                        buffer++;
+                        continue;
+                }
 
                 key.clear();
                 value.clear();
@@ -116,7 +136,8 @@ bool Config::parse(std::function<void(cfg_prop &)> cb)
 
                 props.push_back(cfg_prop{
                         .key = key,
-                        .value = value
+                        .value = value,
+                        .section = section
                 });
 
                 skip_spaces(&buffer);
@@ -155,10 +176,12 @@ bool Config::read_file()
         size = ftell(fd);
         rewind(fd);
 
-        this->_buffer = (char *) malloc(size);
+        this->_buffer = (char *) calloc(size + 1, sizeof(char));
         this->buff_len = size;
 
         fread((void *) this->_buffer, size, 1, fd);
+
+        this->_buffer[size] = '\0';
 
         fclose(fd);
 

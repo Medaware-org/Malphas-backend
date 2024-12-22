@@ -7,6 +7,7 @@
 struct cfg_prop {
 	std::string key;
 	std::string value;
+	std::string section;
 };
 
 class Config {
