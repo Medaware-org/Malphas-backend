@@ -2,12 +2,17 @@
 #include <utility>
 #include <crow_all.h>
 
-Database::Database(std::string user, std::string password, std::string db) : db_user(std::move(user)),
-                                                                             db_password(std::move(password)),
-                                                                             db_db(std::move(db)),
-                                                                             conn(nullptr)
+Database::Database(std::string user, std::string password, std::string db, std::string host, int port)
+        : db_user(std::move(user)),
+          db_password(std::move(password)),
+          db_db(std::move(db)),
+          db_host(std::move(host)),
+          db_port(port),
+          conn(nullptr)
 {
-        this->db_conn_str = "user=" + db_user + " password=" + db_password + " dbname=" + db_db + " port=5432 host=localhost";
+        this->db_conn_str =
+                "user=" + db_user + " password=" + db_password + " dbname=" + db_db + " port=" + std::to_string(port) +
+                " host=" + db_host;
         CROW_LOG_INFO << "PostgreSQL connection string: \"" << this->db_conn_str << "\"";
 }
 

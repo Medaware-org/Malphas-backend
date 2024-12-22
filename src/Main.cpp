@@ -24,11 +24,21 @@ int main()
         cfg.add_required("database.user");
         cfg.add_required("database.password");
         cfg.add_required("database.db");
+        cfg.add_required("database.host");
+        cfg.add_required("database.port", [](const std::string &prop) {
+                try {
+                        std::stoi(prop);
+                } catch (...) {
+                        return false;
+                }
+                return true;
+        });
 
         if (!cfg.validate())
                 return 1;
 
-        Database db = Database(cfg["database.user"], cfg["database.password"], cfg["database.db"]);
+        Database db = Database(cfg["database.user"], cfg["database.password"], cfg["database.db"], cfg["database.host"],
+                               std::stoi(cfg["database.port"]));
         if (!db.connect())
                 return 1;
 
