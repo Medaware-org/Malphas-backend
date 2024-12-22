@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.29)
 project(malphas)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_BUILD_TYPE Debug)
 
