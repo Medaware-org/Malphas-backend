@@ -2,6 +2,7 @@
 #include <Database.hpp>
 #include <crow_all.h>
 #include <iostream>
+#include <optional>
 
 const char *banner = "  __  __       _       _               \n"
                      " |  \\/  |     | |     | |              \n"
@@ -16,14 +17,14 @@ int main()
 {
         std::cout << banner << std::endl;
 
-        std::string db_user;
-        std::string db_password;
-        std::string db_db;
+        std::optional<std::string> db_user;
+        std::optional<std::string> db_password;
+        std::optional<std::string> db_db;
         bool error = false;
 
         Config cfg = Config("config.cfg");
         if (!cfg.parse([&](cfg_prop &prop) {
-                std::string *dst;
+                std::optional<std::string> *dst;
 
                 if (error)
                         return;
@@ -46,7 +47,14 @@ int main()
         if (error)
                 return 1;
 
-        Database db = Database(db_user, db_password, db_db);
+        // TODO Implement a better cfg validation system with less redundancies
+#define HANDLE_EMPTY(opt, path) if (opt->empty()) { CROW_LOG_CRITICAL << "Required property not set: " << path; return 1; }
+        HANDLE_EMPTY(db_user, "database.user")
+        HANDLE_EMPTY(db_password, "database.password")
+        HANDLE_EMPTY(db_db, "database.db")
+#undef HANDLE_EMPTY
+
+        Database db = Database(db_user.value(), db_password.value(), db_db.value());
         if (!db.connect())
                 return 1;
 
