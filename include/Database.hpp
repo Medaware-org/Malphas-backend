@@ -26,4 +26,14 @@ class Database {
          * @returns <code>true</code> if connecting succeeded, or <code>false</code> in case it failed.
          */
         [[nodiscard]] bool connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port);
+
+        /**
+         * Initialize the migration system by executing `migrations/init.sql` if needed
+         */
+        [[nodiscard]] bool init_migrations();
+
+        /**
+         * Execute a SQL script stored in a file
+         */
+        [[nodiscard]] bool execute_script(const char *path);
 };

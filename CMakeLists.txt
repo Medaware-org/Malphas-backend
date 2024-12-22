@@ -7,10 +7,6 @@ set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_BUILD_TYPE Debug)
 
-# Compiled binaries are to be put in the 'build' directory
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY build)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY build)
-
 # This keeps Clangd from getting confused over imports when developing in Vim
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 

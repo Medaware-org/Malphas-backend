@@ -52,6 +52,9 @@ int main()
         if (!db.connect(db_user, db_password, db_db, db_host, db_port))
                 return 1;
 
+        if (!db.init_migrations())
+                return 1;
+
         crow::SimpleApp app;
         app.loglevel(crow::LogLevel::Info);
 
