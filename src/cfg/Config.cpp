@@ -13,12 +13,12 @@ Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
 {
 }
 
-void Config::add_required(const std::string& str)
+void Config::add_required(const std::string &str)
 {
-        add_required(str, [](const std::string&) { return true; });
+        add_required(str, [](const std::string &) { return true; });
 }
 
-void Config::add_required(const std::string& str, std::function<bool(std::string)> validation)
+void Config::add_required(const std::string &str, std::function<bool(std::string)> validation)
 {
         auto iter = required.find(str);
 
@@ -220,14 +220,17 @@ std::string Config::operator[](const char *path)
 bool Config::read_file()
 {
         FILE *fd;
-#define ERR { CROW_LOG_CRITICAL << "Could not open config file: " << this->path; return false; }
+        
 #if defined(_WIN32)
-        if (fopen_s(&fd, this->path, "r") != 0) ERR
+        if (fopen_s(&fd, this->path, "r") != 0) {
 #else
         fd = fopen(this->path, "r");
-        if (!fd) ERR
+        if (!fd) {
 #endif
-#undef ERR
+                CROW_LOG_CRITICAL << "Could not open config file: " << this->path;
+                return false;
+        }
+
         unsigned int size;
 
 
