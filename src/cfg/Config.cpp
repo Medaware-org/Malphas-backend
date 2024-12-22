@@ -1,9 +1,9 @@
 #include <cfg/Config.hpp>
-#include <cstdio>
 #include <crow_all.h>
 #include <cstdlib>
 #include <utility>
 #include <util.hpp>
+#include <parser.hpp>
 
 bool cfg_prop::operator==(const char *path) const
 {
@@ -35,46 +35,6 @@ Config::~Config()
                 return;
 
         free((void *) this->_buffer);
-}
-
-#define IS_SPACE(c) (c == ' ' || c == '\t')
-
-int skip_spaces(char **buff)
-{
-        int nSkip = 0;
-        while (IS_SPACE(**buff)) {
-                (*buff)++;
-                nSkip++;
-        }
-        return nSkip;
-}
-
-#undef IS_SPACE
-
-#define IS_IDEN(c) ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_')
-
-int parse_identifier(char **buff, std::string &dst)
-{
-        int nLen = 0;
-        while (IS_IDEN(**buff)) {
-                dst.push_back(**buff);
-                (*buff)++;
-                nLen++;
-        }
-        return nLen;
-}
-
-#undef IS_IDEN
-
-int parse_value(char **buff, std::string &dst)
-{
-        int nLen = 0;
-        while (**buff != '\n' && **buff != '\0') {
-                dst.push_back(**buff);
-                (*buff)++;
-                nLen++;
-        }
-        return nLen;
 }
 
 bool Config::parse()

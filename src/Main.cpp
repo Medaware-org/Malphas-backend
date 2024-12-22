@@ -49,10 +49,14 @@ int main()
                 return 1;
 
         Database db = Database();
+
         if (!db.connect(db_user, db_password, db_db, db_host, db_port))
                 return 1;
 
         if (!db.init_migrations())
+                return 1;
+
+        if (!db.run_migrations())
                 return 1;
 
         crow::SimpleApp app;

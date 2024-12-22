@@ -36,4 +36,12 @@ class Database {
          * Execute a SQL script stored in a file
          */
         [[nodiscard]] bool execute_script(const char *path);
+
+        /**
+         * Run new database migrations
+         */
+        [[nodiscard]] bool run_migrations();
+
+    private:
+        [[nodiscard]] bool add_migration_entry(int number);
 };
