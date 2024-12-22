@@ -27,11 +27,12 @@ int main()
         cfg.add_required("database.host");
         cfg.add_required("database.port", [](const std::string &prop) {
                 try {
-                        std::stoi(prop);
+                        size_t pos;
+                        std::stoi(prop, &pos);
+                        return pos == prop.size();
                 } catch (...) {
                         return false;
                 }
-                return true;
         });
 
         if (!cfg.validate())
