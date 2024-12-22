@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <crow_all.h>
 #include <cstdlib>
+#include <utility>
 
 bool cfg_prop::operator==(const char *path) const
 {
@@ -14,14 +15,17 @@ Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
 
 void Config::add_required(std::string str)
 {
-        auto iter = std::find_if(this->required.begin(), this->required.end(), [&](std::string &r) {
-                return r == str;
-        });
+        add_required(str, [](std::string) { return true; });
+}
+
+void Config::add_required(std::string str, std::function<bool(std::string)> validation)
+{
+        auto iter = required.find(str);
 
         if (iter != this->required.end())
                 return;
 
-        this->required.push_back(str);
+        this->required[str] = std::move(validation);
 }
 
 Config::~Config()
@@ -177,9 +181,8 @@ bool Config::validate()
         bool ok = true;
 
         std::map<std::string, bool> statuses;
-        std::for_each(this->required.begin(), this->required.end(), [&](std::string &req) {
-                statuses[req] = false;
-        });
+        for (auto &[key, value]: required)
+                statuses[key] = false;
         std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop &prop) {
                 std::string key = prop.section + "." + prop.key;
                 if (statuses.find(key) == statuses.end()) {
@@ -190,8 +193,14 @@ bool Config::validate()
                 statuses[key] = true;
         });
         for (auto &[key, value]: statuses) {
-                if (value)
+                if (value) {
+                        auto cb = required[key];
+                        if (!cb(std::string((*this)[key.c_str()]))) {
+                                CROW_LOG_CRITICAL << "Property '" << key << "' did not pass value validation";
+                                ok = false;
+                        }
                         continue;
+                }
 
                 CROW_LOG_CRITICAL << "Required configuration property not set: " << key;
                 ok = false;

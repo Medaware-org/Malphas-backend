@@ -2,7 +2,6 @@
 #include <Database.hpp>
 #include <crow_all.h>
 #include <iostream>
-#include <optional>
 
 const char *banner = "  __  __       _       _               \n"
                      " |  \\/  |     | |     | |              \n"

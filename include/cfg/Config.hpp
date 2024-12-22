@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <map>
 
 struct cfg_prop {
         std::string key;
@@ -20,13 +21,14 @@ class Config {
         unsigned int buff_len;
         bool parsed;
     private:
-        std::vector<std::string> required;
+        std::map<std::string, std::function<bool(std::string)>> required;
     public:
         Config(const char *path);
 
         ~Config();
 
         void add_required(std::string str);
+        void add_required(std::string str, std::function<bool(std::string)> validation);
 
         bool parse();
 
