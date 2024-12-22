@@ -4,8 +4,14 @@ project(malphas)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_BUILD_TYPE Debug)
+
+# Compiled binaries are to be put in the 'build' directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY build)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY build)
+
+# This keeps Clangd from getting confused over imports when developing in Vim
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Make the crow library directly #include-able
 include_directories(vendor/crow)
@@ -28,5 +34,5 @@ if (UNIX)
     endif ()
 endif ()
 
-add_executable(malphas src/Main.cpp src/Database.cpp)
+add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp)
 target_link_libraries(malphas ${PostgreSQL_LIBRARIES})

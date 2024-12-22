@@ -4928,7 +4928,7 @@ namespace crow
     /// A wrapper for `nodejs/http-parser`.
 
     ///
-    /// Used to generate a \ref crow.request from the TCP socket buffer.
+    /// Used to generate a \ref crow.request from the TCP socket _buffer.
     template<typename Handler>
     struct HTTPParser : public http_parser
     {
@@ -5022,7 +5022,7 @@ namespace crow
         }
 
         // return false on error
-        /// Parse a buffer into the different sections of an HTTP request.
+        /// Parse a _buffer into the different sections of an HTTP request.
         bool feed(const char* buffer, int length)
         {
             if (message_complete)
@@ -10067,7 +10067,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
                     case WebSocketReadState::MiniHeader:
                     {
                         mini_header_ = 0;
-                        //asio::async_read(adaptor_.socket(), asio::buffer(&mini_header_, 1),
+                        //asio::async_read(adaptor_.socket(), asio::_buffer(&mini_header_, 1),
                         adaptor_.socket().async_read_some(
                           asio::buffer(&mini_header_, 2),
                           [this](const error_code& ec, std::size_t
