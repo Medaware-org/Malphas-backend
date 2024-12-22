@@ -3,6 +3,7 @@
 #include <crow_all.h>
 #include <cstdlib>
 #include <utility>
+#include <util.hpp>
 
 bool cfg_prop::operator==(const char *path) const
 {
@@ -76,13 +77,14 @@ int parse_value(char **buff, std::string &dst)
         return nLen;
 }
 
-[[nodiscard]]
 bool Config::parse()
 {
         if (parsed)
                 return true;
 
-        if (!read_file())
+        this->_buffer = read_file(this->path, &this->buff_len);
+
+        if (!_buffer)
                 return false;
 
         char *buffer = this->_buffer;
@@ -177,7 +179,6 @@ bool Config::parse()
         return (parsed = true);
 }
 
-[[nodiscard]]
 bool Config::validate()
 {
         if (!this->parsed)
@@ -221,38 +222,3 @@ std::string Config::operator[](const char *path)
 
         return "";
 }
-
-[[nodiscard]]
-bool Config::read_file()
-{
-        FILE *fd;
-        
-#if defined(_WIN32)
-        if (fopen_s(&fd, this->path, "r") != 0) {
-#else
-        fd = fopen(this->path, "r");
-        if (!fd) {
-#endif
-                CROW_LOG_CRITICAL << "Could not open config file: " << this->path;
-                return false;
-        }
-
-        unsigned int size;
-
-
-        fseek(fd, 0, SEEK_END);
-        size = ftell(fd);
-        rewind(fd);
-
-        this->_buffer = (char *) calloc(size + 1, sizeof(char));
-        this->buff_len = size;
-
-        fread((void *) this->_buffer, size, 1, fd);
-
-        this->_buffer[size] = '\0';
-
-        fclose(fd);
-
-        return true;
-}
-

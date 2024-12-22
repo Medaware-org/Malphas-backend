@@ -11,7 +11,6 @@ Database::~Database()
         free(this->conn);
 }
 
-[[nodiscard]]
 bool Database::connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port)
 {
         std::string conn_str =

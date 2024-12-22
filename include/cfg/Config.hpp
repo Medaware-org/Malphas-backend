@@ -69,9 +69,6 @@ class Config {
          * @param path The path of the property in the form <code>section.key</code>
          */
         [[nodiscard]] std::string operator[](const char *path);
-
-    private:
-        [[nodiscard]] bool read_file();
 };
 
 /**

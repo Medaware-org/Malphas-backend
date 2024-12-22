@@ -35,5 +35,5 @@ if (UNIX)
     endif ()
 endif ()
 
-add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp)
+add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp)
 target_link_libraries(malphas ${PostgreSQL_LIBRARIES})
