@@ -76,6 +76,7 @@ int parse_value(char **buff, std::string &dst)
         return nLen;
 }
 
+[[nodiscard]]
 bool Config::parse()
 {
         if (parsed)
@@ -176,8 +177,12 @@ bool Config::parse()
         return (parsed = true);
 }
 
+[[nodiscard]]
 bool Config::validate()
 {
+        if (!this->parsed)
+                return false;
+
         bool ok = true;
 
         std::unordered_map<std::string, bool> statuses;
@@ -217,6 +222,7 @@ std::string Config::operator[](const char *path)
         return "";
 }
 
+[[nodiscard]]
 bool Config::read_file()
 {
         FILE *fd;

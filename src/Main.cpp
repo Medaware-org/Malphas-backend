@@ -48,8 +48,8 @@ int main()
         if (!cfg.validate())
                 return 1;
 
-        Database db = Database(db_user, db_password, db_db, db_host, db_port);
-        if (!db.connect())
+        Database db = Database();
+        if (!db.connect(db_user, db_password, db_db, db_host, db_port))
                 return 1;
 
         crow::SimpleApp app;

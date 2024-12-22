@@ -10,15 +10,9 @@
 class Database {
     private:
         PGconn *conn;
-        std::string db_user;
-        std::string db_password;
-        std::string db_db;
-        std::string db_conn_str;
-        std::string db_host;
-        int db_port;
     public:
-        Database(std::string user, std::string password, std::string db, std::string host, int port);
+        Database();
         ~Database();
     public:
-        bool connect();
+        bool connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port);
 };
