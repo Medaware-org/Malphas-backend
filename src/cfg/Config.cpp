@@ -12,6 +12,18 @@ Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
 {
 }
 
+void Config::add_required(std::string str)
+{
+        auto iter = std::find_if(this->required.begin(), this->required.end(), [&](std::string &r) {
+                return r == str;
+        });
+
+        if (iter != this->required.end())
+                return;
+
+        this->required.push_back(str);
+}
+
 Config::~Config()
 {
         if (!this->_buffer)
@@ -60,7 +72,7 @@ int parse_value(char **buff, std::string &dst)
         return nLen;
 }
 
-bool Config::parse(std::function<void(cfg_prop &)> cb)
+bool Config::parse()
 {
         if (parsed)
                 return true;
@@ -157,13 +169,43 @@ bool Config::parse(std::function<void(cfg_prop &)> cb)
         free(_buffer);
         _buffer = nullptr;
 
-        parsed = true;
+        return (parsed = true);
+}
 
-        std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop prop) {
-                cb(prop);
+bool Config::validate()
+{
+        bool ok = true;
+
+        std::map<std::string, bool> statuses;
+        std::for_each(this->required.begin(), this->required.end(), [&](std::string &req) {
+                statuses[req] = false;
         });
+        std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop &prop) {
+                std::string key = prop.section + "." + prop.key;
+                if (statuses.find(key) == statuses.end()) {
+                        CROW_LOG_CRITICAL << "Unknown configuration property: " << key;
+                        ok = false;
+                        return;
+                }
+                statuses[key] = true;
+        });
+        for (auto &[key, value]: statuses) {
+                if (value)
+                        continue;
 
-        return true;
+                CROW_LOG_CRITICAL << "Required configuration property not set: " << key;
+                ok = false;
+        }
+        return ok;
+}
+
+std::string Config::operator[](const char *path)
+{
+        for (auto &prop: this->props)
+                if (path == (prop.section + "." + prop.key))
+                        return prop.value;
+
+        return "";
 }
 
 bool Config::read_file()

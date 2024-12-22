@@ -17,44 +17,19 @@ int main()
 {
         std::cout << banner << std::endl;
 
-        std::optional<std::string> db_user;
-        std::optional<std::string> db_password;
-        std::optional<std::string> db_db;
-        bool error = false;
-
         Config cfg = Config("config.cfg");
-        if (!cfg.parse([&](cfg_prop &prop) {
-                std::optional<std::string> *dst;
 
-                if (error)
-                        return;
-
-                if (prop == "database.user")
-                        dst = &db_user;
-                else if (prop == "database.password")
-                        dst = &db_password;
-                else if (prop == "database.db")
-                        dst = &db_db;
-                else {
-                        CROW_LOG_CRITICAL << "Unknown configuration property: " << prop.section << "." << prop.key;
-                        error = true;
-                        return;
-                }
-
-                *dst = prop.value;
-        })) { return 1; }
-
-        if (error)
+        if (!cfg.parse())
                 return 1;
 
-        // TODO Implement a better cfg validation system with less redundancies
-#define HANDLE_EMPTY(opt, path) if (opt->empty()) { CROW_LOG_CRITICAL << "Required property not set: " << path; return 1; }
-        HANDLE_EMPTY(db_user, "database.user")
-        HANDLE_EMPTY(db_password, "database.password")
-        HANDLE_EMPTY(db_db, "database.db")
-#undef HANDLE_EMPTY
+        cfg.add_required("database.user");
+        cfg.add_required("database.password");
+        cfg.add_required("database.db");
 
-        Database db = Database(db_user.value(), db_password.value(), db_db.value());
+        if (!cfg.validate())
+                return 1;
+
+        Database db = Database(cfg["database.user"], cfg["database.password"], cfg["database.db"]);
         if (!db.connect())
                 return 1;
 

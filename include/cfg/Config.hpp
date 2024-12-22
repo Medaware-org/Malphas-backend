@@ -9,7 +9,7 @@ struct cfg_prop {
         std::string value;
         std::string section;
 
-        bool operator ==(const char *path) const;
+        bool operator==(const char *path) const;
 };
 
 class Config {
@@ -19,12 +19,20 @@ class Config {
         char *_buffer;
         unsigned int buff_len;
         bool parsed;
+    private:
+        std::vector<std::string> required;
     public:
         Config(const char *path);
 
         ~Config();
 
-        bool parse(std::function<void(cfg_prop &)> cb);
+        void add_required(std::string str);
+
+        bool parse();
+
+        bool validate();
+
+        std::string operator[](const char *path);
 
     private:
         bool read_file();
