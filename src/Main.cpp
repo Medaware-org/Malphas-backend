@@ -21,25 +21,34 @@ int main()
         if (!cfg.parse())
                 return 1;
 
-        cfg.add_required("database.user");
-        cfg.add_required("database.password");
-        cfg.add_required("database.db");
-        cfg.add_required("database.host");
-        cfg.add_required("database.port", [](const std::string &prop) {
+        std::string db_user;
+        std::string db_password;
+        std::string db_db;
+        std::string db_host;
+        int db_port;
+
+#define ASSIGN(dst) [&](const std::string &prop) { dst = prop; return true; }
+
+        cfg.add_required("database.user", ASSIGN(db_user));
+        cfg.add_required("database.password", ASSIGN(db_password));
+        cfg.add_required("database.db", ASSIGN(db_db));
+        cfg.add_required("database.host", ASSIGN(db_host));
+        cfg.add_required("database.port", [&](const std::string &prop) {
                 try {
                         size_t pos;
-                        std::stoi(prop, &pos);
+                        db_port = std::stoi(prop, &pos);
                         return pos == prop.size();
                 } catch (...) {
                         return false;
                 }
         });
 
+#undef ASSIGN
+
         if (!cfg.validate())
                 return 1;
 
-        Database db = Database(cfg["database.user"], cfg["database.password"], cfg["database.db"], cfg["database.host"],
-                               std::stoi(cfg["database.port"]));
+        Database db = Database(db_user, db_password, db_db, db_host, db_port);
         if (!db.connect())
                 return 1;
 
