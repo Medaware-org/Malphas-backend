@@ -51,6 +51,15 @@ class Database {
          */
         [[nodiscard]] bool run_migrations();
 
+        /**
+         * Run a raw query on the database
+         */
+        [[nodiscard]] PGresult *query(std::string &query, ExecStatusType *status);
+
     private:
+
+        /**
+         * Used internally by the migration system to increment the number of the current migration
+         */
         [[nodiscard]] bool add_migration_entry(int number);
 };

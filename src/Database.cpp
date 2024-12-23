@@ -156,6 +156,13 @@ bool Database::run_migrations()
         return true;
 }
 
+[[nodiscard]] PGresult *Database::query(std::string &query, ExecStatusType *status)
+{
+        PGresult *res = PQexec(this->conn, query.c_str());
+        (*status) = PQresultStatus(res);
+        return res;
+}
+
 bool Database::add_migration_entry(int number)
 {
         std::string query = "INSERT INTO db_migration VALUES (" + std::to_string(number) + ")";

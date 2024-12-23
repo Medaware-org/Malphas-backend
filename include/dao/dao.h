@@ -7,18 +7,17 @@
 #include <string>
 #include <any>
 #include <libpq-fe.h>
+#include <Database.hpp>
 
-static bool dao_query(PGconn *conn, std::string query, ExecStatusType assert_status)
+static bool dao_query(Database &db, std::string query, ExecStatusType assert_status)
 {
-        PGresult *res = PQexec(conn, query.c_str());
-
-        bool status = true;
-
-        if (PQresultStatus(res) != assert_status)
-                status = false;
-
-        PQclear(res);
-        return status;
+	ExecStatusType status;
+        PGresult *res = db.query(query, &status);
+	bool ok = true;
+	if (status != assert_status)
+		ok = false;
+	PQclear(res);
+	return ok;
 }
 
 struct user {
@@ -27,9 +26,9 @@ struct user {
 	std::string passwd_hash;
 };
 
-bool user_insert(PGconn *conn, std::string id, std::string nickname, std::string passwd_hash) {
+bool user_insert(Database &db, std::string id, std::string nickname, std::string passwd_hash) {
 	std::string query = "INSERT INTO user (id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" + passwd_hash + "\")";
-	return dao_query(conn, query, PGRES_COMMAND_OK);
+	return dao_query(db, query, PGRES_COMMAND_OK);
 }
 
 struct session {
@@ -37,8 +36,8 @@ struct session {
 	std::string session_token;
 };
 
-bool session_insert(PGconn *conn, std::string user_id, std::string session_token) {
+bool session_insert(Database &db, std::string user_id, std::string session_token) {
 	std::string query = "INSERT INTO session (user_id, session_token) VALUES (" + user_id + ", \"" + session_token + "\")";
-	return dao_query(conn, query, PGRES_COMMAND_OK);
+	return dao_query(db, query, PGRES_COMMAND_OK);
 }
 

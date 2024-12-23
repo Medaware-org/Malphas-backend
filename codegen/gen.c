@@ -1,3 +1,10 @@
+/**
+ * This script's purpose is to generate DAOs from an already existing database.
+ * It accomplishes this by connecting to said DB, querying the tables of the 'public' schema,
+ * and generating structs as well as utility functions for each table after performing
+ * SQL to C++ type mappings. This script is meant to run >after< the database has been migrated!
+ **/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +68,7 @@ int serialise_table(PGconn *conn, char *table)
         printf("};\n\n");
 
         // Emit insert function
-        printf("bool %s_insert(PGconn *conn, ", table);
+        printf("bool %s_insert(Database &db, ", table);
         for (int i = 0; i < nTuples; i++) {
                 char *column = PQgetvalue(res, i, 3);
                 char *type = PQgetvalue(res, i, 7);
@@ -100,7 +107,7 @@ int serialise_table(PGconn *conn, char *table)
                 else
                         printf(")\";\n");
         }
-        printf("\treturn dao_query(conn, query, PGRES_COMMAND_OK);\n");
+        printf("\treturn dao_query(db, query, PGRES_COMMAND_OK);\n");
         printf("}\n\n");
 
         PQclear(res);
@@ -141,18 +148,17 @@ void gen_preamble()
                "\n"
                "#include <string>\n"
                "#include <any>\n"
-               "#include <libpq-fe.h>\n\n"
-               "static bool dao_query(PGconn *conn, std::string query, ExecStatusType assert_status)\n"
+               "#include <libpq-fe.h>\n"
+               "#include <Database.hpp>\n\n"
+               "static bool dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
                "{\n"
-               "        PGresult *res = PQexec(conn, query.c_str());\n"
-               "\n"
-               "        bool status = true;\n"
-               "\n"
-               "        if (PQresultStatus(res) != assert_status)\n"
-               "                status = false;\n"
-               "\n"
-               "        PQclear(res);\n"
-               "        return status;\n"
+               "\tExecStatusType status;\n"
+               "        PGresult *res = db.query(query, &status);\n"
+               "\tbool ok = true;\n"
+               "\tif (status != assert_status)\n"
+               "\t\tok = false;\n"
+               "\tPQclear(res);\n"
+               "\treturn ok;\n"
                "}\n\n");
 }
 
