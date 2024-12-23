@@ -16,20 +16,20 @@ int main()
 {
         std::cout << banner << std::endl;
 
-        Config cfg = Config("config.cfg");
+        db_config cfg;
 
-        if (!cfg.parse())
+        if (!parse_db_config(&cfg))
                 return 1;
 
-        cfg.add_required("database.user");
-        cfg.add_required("database.password");
-        cfg.add_required("database.db");
+        Database db = Database();
 
-        if (!cfg.validate())
+        if (!db.connect(cfg))
                 return 1;
 
-        Database db = Database(cfg["database.user"], cfg["database.password"], cfg["database.db"]);
-        if (!db.connect())
+        if (!db.init_migrations())
+                return 1;
+
+        if (!db.run_migrations())
                 return 1;
 
         crow::SimpleApp app;

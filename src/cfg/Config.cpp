@@ -1,269 +1,214 @@
 #include <cfg/Config.hpp>
-#include <cstdio>
-#include <crow_all.h>
 #include <cstdlib>
 #include <utility>
+#include <util.hpp>
+#include <parser.hpp>
 
-bool cfg_prop::operator==(const char* path) const
+bool cfg_prop::operator==(const char *path) const
 {
-	return path == (this->section + "." + this->key);
+        return path == (this->section + "." + this->key);
 }
 
-Config::Config(const char* path) : path(path), _buffer(nullptr), parsed(false)
+bool parse_db_config(db_config *dst)
+{
+        Config cfg = Config("config.cfg");
+
+        if (!cfg.parse())
+                return false;
+
+#define ASSIGN(dst) [&](const std::string &prop) { dst = prop; return true; }
+
+        cfg.add_required("database.user", ASSIGN(dst->user));
+        cfg.add_required("database.password", ASSIGN(dst->password));
+        cfg.add_required("database.db", ASSIGN(dst->db));
+        cfg.add_required("database.host", ASSIGN(dst->host));
+        cfg.add_required("database.port", [&](const std::string &prop) {
+                try {
+                        size_t pos;
+                        dst->port = std::stoi(prop, &pos);
+                        return pos == prop.size();
+                } catch (...) {
+                        return false;
+                }
+        });
+
+#undef ASSIGN
+
+        if (!cfg.validate())
+                return false;
+
+        return true;
+}
+
+Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
 {
 }
 
-void Config::add_required(std::string str)
+void Config::add_required(const std::string &str)
 {
-	add_required(str, [](std::string) { return true; });
+        add_required(str, [](const std::string &) { return true; });
 }
 
-void Config::add_required(std::string str, std::function<bool(std::string)> validation)
+void Config::add_required(const std::string &str, std::function<bool(std::string)> validation)
 {
-	auto iter = required.find(str);
+        auto iter = required.find(str);
 
-	if (iter != this->required.end())
-		return;
+        if (iter != this->required.end())
+                return;
 
-	this->required[str] = std::move(validation);
+        this->required[str] = std::move(validation);
 }
 
 Config::~Config()
 {
-	if (!this->_buffer)
-		return;
+        if (!this->_buffer)
+                return;
 
-	free((void*)this->_buffer);
-}
-
-#define IS_SPACE(c) (c == ' ' || c == '\t')
-
-int skip_spaces(char** buff)
-{
-	int nSkip = 0;
-	while (IS_SPACE(**buff))
-	{
-		(*buff)++;
-		nSkip++;
-	}
-	return nSkip;
-}
-
-#undef IS_SPACE
-
-#define IS_IDEN(c) ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_')
-
-int parse_identifier(char** buff, std::string& dst)
-{
-	int nLen = 0;
-	while (IS_IDEN(**buff))
-	{
-		dst.push_back(**buff);
-		(*buff)++;
-		nLen++;
-	}
-	return nLen;
-}
-
-#undef IS_IDEN
-
-int parse_value(char** buff, std::string& dst)
-{
-	int nLen = 0;
-	while (**buff != '\n' && **buff != '\0')
-	{
-		dst.push_back(**buff);
-		(*buff)++;
-		nLen++;
-	}
-	return nLen;
+        free((void *) this->_buffer);
 }
 
 bool Config::parse()
 {
-	if (parsed)
-		return true;
+        if (parsed)
+                return true;
 
-	if (!read_file())
-		return false;
+        this->_buffer = read_file(this->path, &this->buff_len);
 
-	char* buffer = this->_buffer;
-	char c;
+        if (!_buffer)
+                return false;
 
-	// Temporary buffers
-	std::string key;
-	std::string value;
-	std::string section = "default";
+        char *buffer = this->_buffer;
+        char c;
 
-	while (true)
-	{
-		skip_spaces(&buffer);
-		c = *buffer;
+        // Temporary buffers
+        std::string key;
+        std::string value;
+        std::string section = "default";
 
-		if (c == '\n')
-		{
-			buffer++;
-			continue;
-		}
+        while (true) {
+                skip_spaces(&buffer);
+                c = *buffer;
 
-		// line comment
-		if (c == '#')
-		{
-			while (c != '\n' && c)
-				c = *(++buffer);
-			continue;
-		}
+                if (c == '\n') {
+                        buffer++;
+                        continue;
+                }
 
-		if (!c) break; // EOF
+                // line comment
+                if (c == '#') {
+                        while (c != '\n' && c)
+                                c = *(++buffer);
+                        continue;
+                }
 
-		// Beginning of a section
-		if (c == '[')
-		{
-			buffer++;
-			section.clear();
-			if (parse_identifier(&buffer, section) <= 0)
-			{
-				CROW_LOG_CRITICAL << "Could not parse config section identifier starting with '"
-					<< (*buffer) << "'";
-				return false;
-			}
-			c = *buffer;
-			if (c != ']')
-			{
-				CROW_LOG_CRITICAL << "Expected ']' after section identifier \"" << section
-					<< "\", got '" << c << "'";
-				return false;
-			}
-			buffer++;
-			continue;
-		}
+                if (!c) break; // EOF
 
-		key.clear();
-		value.clear();
+                // Beginning of a section
+                if (c == '[') {
+                        buffer++;
+                        section.clear();
+                        if (parse_identifier(&buffer, section) <= 0) {
+                                CROW_LOG_CRITICAL << "Could not parse config section identifier starting with '"
+                                                  << (*buffer) << "'";
+                                return false;
+                        }
+                        c = *buffer;
+                        if (c != ']') {
+                                CROW_LOG_CRITICAL << "Expected ']' after section identifier \"" << section
+                                                  << "\", got '" << c << "'";
+                                return false;
+                        }
+                        buffer++;
+                        continue;
+                }
 
-		if (parse_identifier(&buffer, key) <= 0)
-		{
-			CROW_LOG_CRITICAL << "Could not parse property identifier starting with '" << c << "'";
-			return false;
-		}
+                key.clear();
+                value.clear();
 
-		skip_spaces(&buffer);
+                if (parse_identifier(&buffer, key) <= 0) {
+                        CROW_LOG_CRITICAL << "Could not parse property identifier starting with '" << c << "'";
+                        return false;
+                }
 
-		c = *buffer;
+                skip_spaces(&buffer);
 
-		if (c != '=')
-		{
-			CROW_LOG_CRITICAL << "Expected '=' after property identifier: " << key << ", got '" << c << "'";
-			return false;
-		}
+                c = *buffer;
 
-		buffer++; // Skip '='
+                if (c != '=') {
+                        CROW_LOG_CRITICAL << "Expected '=' after property identifier: " << key << ", got '" << c << "'";
+                        return false;
+                }
 
-		skip_spaces(&buffer);
+                buffer++; // Skip '='
 
-		if (parse_value(&buffer, value) <= 0)
-		{
-			CROW_LOG_CRITICAL << "Could not parse value of property: " << key;
-			return false;
-		}
+                skip_spaces(&buffer);
 
-		props.push_back(cfg_prop{
-				.key = key,
-				.value = value,
-				.section = section
-			});
+                if (parse_value(&buffer, value) <= 0) {
+                        CROW_LOG_CRITICAL << "Could not parse value of property: " << key;
+                        return false;
+                }
 
-		skip_spaces(&buffer);
+                props.push_back(cfg_prop{
+                        .key = key,
+                        .value = value,
+                        .section = section
+                });
 
-		c = *buffer;
+                skip_spaces(&buffer);
 
-		if (c == '\n')
-			buffer++;
-	}
+                c = *buffer;
 
-	// We've already parsed the config, so there's no need to keep the original buffer around
-	free(_buffer);
-	_buffer = nullptr;
+                if (c == '\n')
+                        buffer++;
+        }
 
-	return (parsed = true);
+        // We've already parsed the config, so there's no need to keep the original buffer around
+        free(_buffer);
+        _buffer = nullptr;
+
+        return (parsed = true);
 }
 
 bool Config::validate()
 {
-	bool ok = true;
+        if (!this->parsed)
+                return false;
 
-	std::unordered_map<std::string, bool> statuses;
-	for (auto& [key, value] : required)
-		statuses[key] = false;
-	std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop& prop) {
-		std::string key = prop.section + "." + prop.key;
-		if (statuses.find(key) == statuses.end())
-		{
-			CROW_LOG_CRITICAL << "Unknown configuration property: " << key;
-			ok = false;
-			return;
-		}
-		statuses[key] = true;
-		});
-	for (auto& [key, value] : statuses)
-	{
-		if (value)
-		{
-			auto cb = required[key];
-			if (!cb(std::string((*this)[key.c_str()])))
-			{
-				CROW_LOG_CRITICAL << "Property '" << key << "' did not pass value validation";
-				ok = false;
-			}
-			continue;
-		}
+        bool ok = true;
 
-		CROW_LOG_CRITICAL << "Required configuration property not set: " << key;
-		ok = false;
-	}
-	return ok;
+        std::unordered_map<std::string, bool> statuses;
+        for (auto &[key, value]: required)
+                statuses[key] = false;
+        std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop &prop) {
+                std::string key = prop.section + "." + prop.key;
+                if (statuses.find(key) == statuses.end()) {
+                        CROW_LOG_CRITICAL << "Unknown configuration property: " << key;
+                        ok = false;
+                        return;
+                }
+                statuses[key] = true;
+        });
+        for (auto &[key, value]: statuses) {
+                if (value) {
+                        auto cb = required[key];
+                        if (!cb(std::string((*this)[key.c_str()]))) {
+                                CROW_LOG_CRITICAL << "Property '" << key << "' did not pass value validation";
+                                ok = false;
+                        }
+                        continue;
+                }
+
+                CROW_LOG_CRITICAL << "Required configuration property not set: " << key;
+                ok = false;
+        }
+        return ok;
 }
 
-std::string Config::operator[](const char* path)
+std::string Config::operator[](const char *path)
 {
-	for (auto& prop : this->props)
-		if (path == (prop.section + "." + prop.key))
-			return prop.value;
+        for (auto &prop: this->props)
+                if (path == (prop.section + "." + prop.key))
+                        return prop.value;
 
-	return "";
+        return "";
 }
-
-bool Config::read_file()
-{
-	#ifdef _WIN32
-	FILE* fd;
-	if (fopen_s(&fd, this->path, "r") != 0)
-		return false;
-	#else
-	FILE* fd = fopen(this->path, "r");
-	#endif
-	unsigned int size;
-
-	if (!fd)
-	{
-		CROW_LOG_CRITICAL << "Could not open config file: " << this->path;
-		return false;
-	}
-
-
-	fseek(fd, 0, SEEK_END);
-	size = ftell(fd);
-	rewind(fd);
-
-	this->_buffer = (char*)calloc(size + 1, sizeof(char));
-	this->buff_len = size;
-
-	fread((void*)this->_buffer, size, 1, fd);
-
-	this->_buffer[size] = '\0';
-
-	fclose(fd);
-
-	return true;
-}
-
