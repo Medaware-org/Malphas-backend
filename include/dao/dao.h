@@ -9,35 +9,67 @@
 #include <libpq-fe.h>
 #include <Database.hpp>
 
-static bool dao_query(Database &db, std::string query, ExecStatusType assert_status)
+#define PASS(x) (x)
+
+static bool finalize_insert_op(PGresult *res)
 {
-	ExecStatusType status;
+        if (!res)
+                return false;
+        PQclear(res);
+        return true;
+}
+
+static PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)
+{
+        ExecStatusType status;
         PGresult *res = db.query(query, &status);
-	bool ok = true;
-	if (status != assert_status)
-		ok = false;
-	PQclear(res);
-	return ok;
+        if (status != assert_status) {
+                PQclear(res);
+                return NULL;
+        }
+        return res;
 }
 
 struct user {
-	std::string id;
-	std::string nickname;
-	std::string passwd_hash;
+        std::string id;
+        std::string nickname;
+        std::string passwd_hash;
 };
 
-bool user_insert(Database &db, std::string id, std::string nickname, std::string passwd_hash) {
-	std::string query = "INSERT INTO user(id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" + passwd_hash + "\")";
-	return dao_query(db, query, PGRES_COMMAND_OK);
+static user dao_map_user(PGresult *result, int tuple)
+{
+        return user{
+                .id = PASS(PQgetvalue(result, tuple, 0)),
+                .nickname = PASS(PQgetvalue(result, tuple, 1)),
+                .passwd_hash = PASS(PQgetvalue(result, tuple, 2)),
+        };
+}
+
+bool user_insert(Database &db, std::string id, std::string nickname, std::string passwd_hash)
+{
+        std::string query =
+                "INSERT INTO user (id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" +
+                passwd_hash + "\")";
+        return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
 struct session {
-	std::string user_id;
-	std::string session_token;
+        std::string session_token;
+        std::string user_id;
 };
 
-bool session_insert(Database &db, std::string user_id, std::string session_token) {
-	std::string query = "INSERT INTO session(user_id, session_token) VALUES (" + user_id + ", \"" + session_token + "\")";
-	return dao_query(db, query, PGRES_COMMAND_OK);
+static session dao_map_session(PGresult *result, int tuple)
+{
+        return session{
+                .session_token = PASS(PQgetvalue(result, tuple, 0)),
+                .user_id = PASS(PQgetvalue(result, tuple, 1)),
+        };
+}
+
+bool session_insert(Database &db, std::string session_token, std::string user_id)
+{
+        std::string query =
+                "INSERT INTO session (session_token, user_id) VALUES (\"" + session_token + "\", " + user_id + ")";
+        return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 

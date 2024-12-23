@@ -11,6 +11,11 @@
 #include <cfg/Config.hpp>
 #include <libpq-fe.h>
 
+struct type_mapping {
+        std::string cpp;        // The C++ type
+        std::string function;   // THe conversion function
+};
+
 PGconn *connect_db(std::string user, std::string password, std::string db, std::string host, int port)
 {
         std::string conn_str = std::format("user={} password={} dbname={} port={} host={}", user, password, db, port,
@@ -27,22 +32,87 @@ PGconn *connect_db(std::string user, std::string password, std::string db, std::
         return conn;
 }
 
-#define MAP(src, dst) if (org == src) return dst;
-
 /*
  * This function maps the type from PostgreSQL relations to C++ types
  */
-std::string map_types(std::string &org)
+type_mapping map_types(const std::string &org, const std::map<std::string, type_mapping> &type_mappings)
 {
-        MAP("text", "std::string")
-        MAP("uuid", "std::string")
-
-        return "std::any";
+        auto iter = type_mappings.find(org);
+        if (iter == type_mappings.end())
+                return type_mapping{.cpp = "std::any", .function = "std::any"};
+        return iter->second;
 }
 
-#undef MAP
+void emit_struct(const std::string &table, const std::map<std::string, std::string> &layout, const std::map<std::string, type_mapping> &type_mappings)
+{
+        std::cout << "struct " << table << " {" << std::endl;
+        for (const auto &[column, type]: layout)
+                std::cout << "\t" << map_types(type, type_mappings).cpp << " " << column << ";" << std::endl;
+        std::cout << "};\n\n";
+}
 
-int serialise_table(PGconn *conn, std::string &table)
+/*
+ * Generate an insert function for a given table
+ */
+void emit_insert(const std::string &table, const std::map<std::string, std::string> &layout, const std::map<std::string, type_mapping> &type_mappings)
+{
+        size_t nTuples = layout.size();
+
+        std::cout << "bool " << table << "_insert(Database &db, ";
+        int index = 0;
+        for (const auto &[column, type]: layout) {
+                std::cout << map_types(type, type_mappings).cpp << " " << column;
+                std::cout << (((index++) + 1 < layout.size()) ? ", " : ") {\n");
+        }
+
+        std::cout << "\tstd::string query = \"INSERT INTO " << table << " (";
+        index = 0;
+        for (const auto &[column, type]: layout) {
+                std::cout << column;
+                std::cout << (((index++) + 1 < nTuples) ? ", " : ") VALUES (");
+        }
+
+        index = 0;
+        for (const auto &[column, type]: layout) {
+                bool quotes = false;
+
+                if (type == "text" || type.find("varchar") != std::string::npos)
+                        quotes = true;
+
+                if (quotes)
+                        std::cout << "\\\"";
+
+                std::cout << "\" + " << column << " + \"";
+
+                if (quotes)
+                        std::cout << "\\\"";
+
+                std::cout << (((index++) + 1 < nTuples) ? ", " : ")\";\n");
+        }
+
+        std::cout << "\treturn finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));" << std::endl;
+        std::cout << "}\n\n";
+}
+
+/*
+ * Generate the mapper for a given relation
+ */
+void emit_dao_mapper(const std::string &table, const std::map<std::string, std::string> &layout, const std::map<std::string, type_mapping> &type_mappings)
+{
+        std::cout << "static " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" << std::endl
+                  << "\treturn " << table << " {\n";
+
+        int index = 0;
+        for (const auto &[column, type]: layout) {
+                type_mapping mapping = map_types(type, type_mappings);
+                std::cout << "\t\t." << column << " = " << mapping.function <<  "(PQgetvalue(result, tuple," << (index++) << "))," << std::endl;
+        }
+
+        std::cout << "\t};\n}\n\n";
+
+}
+
+int serialise_table(PGconn *conn, std::string &table, const std::map<std::string, type_mapping> &type_mappings)
 {
         std::string query = std::format("select * from information_schema.columns where table_name = '{}'", table);
         PGresult *res = PQexec(conn, query.c_str());
@@ -55,59 +125,28 @@ int serialise_table(PGconn *conn, std::string &table)
 
         int nTuples = PQntuples(res);
 
-        // Emit the struct
-        std::cout << "struct " << table << " {" << std::endl;
+        std::map<std::string, std::string> fields;
         for (int i = 0; i < nTuples; i++) {
                 std::string column = PQgetvalue(res, i, 3);
                 std::string type = PQgetvalue(res, i, 7);
-                std::cout << "\t" << map_types(type) << " " << column << ";" << std::endl;
+                fields[column] = type;
         }
-        std::cout << "};\n\n";
-
-        // Emit insert function
-        std::cout << "bool " << table << "_insert(Database &db, ";
-        for (int i = 0; i < nTuples; i++) {
-                std::string column = PQgetvalue(res, i, 3);
-                std::string type = PQgetvalue(res, i, 7);
-                std::cout << map_types(type) << " " << column;
-                std::cout << ((i + 1 < nTuples) ? ", " : ") {\n");
-        }
-
-        std::cout << "\tstd::string query = \"INSERT INTO " << table << "(";
-        for (int i = 0; i < nTuples; i++) {
-                std::string column = PQgetvalue(res, i, 3);
-                std::cout << column;
-                std::cout << ((i + 1 < nTuples) ? ", " : ") VALUES (");
-        }
-
-        for (int i = 0; i < nTuples; i++) {
-                std::string column = PQgetvalue(res, i, 3);
-                std::string type = PQgetvalue(res, i, 7);
-                int quotes = 0;
-
-                if (type == "text" || type.find("varchar") != std::string::npos)
-                        quotes = 1;
-
-                if (quotes)
-                        std::cout << "\\\"";
-
-                std::cout << "\" + " << column << " + \"";
-
-                if (quotes)
-                        std::cout << "\\\"";
-
-                std::cout << ((i + 1 < nTuples) ? ", " : ")\";\n");
-        }
-
-        std::cout << "\treturn dao_query(db, query, PGRES_COMMAND_OK);" << std::endl;
-        std::cout << "}\n\n";
 
         PQclear(res);
+
+        // Emit the struct
+        emit_struct(table, fields, type_mappings);
+
+        // Mapper
+        emit_dao_mapper(table, fields, type_mappings);
+
+        // Emit insert function
+        emit_insert(table, fields, type_mappings);
 
         return 0;
 }
 
-int generate_tables(PGconn *conn)
+int generate_tables(PGconn *conn, const std::map<std::string, type_mapping> &type_mappings)
 {
         const std::string query = "select * from information_schema.tables where table_schema = 'public'";
         PGresult *res = PQexec(conn, query.c_str());
@@ -125,7 +164,7 @@ int generate_tables(PGconn *conn)
                 if (table == "db_migration")
                         continue;
 
-                if (serialise_table(conn, table) < 0)
+                if (serialise_table(conn, table, type_mappings) < 0)
                         return -1;
         }
         PQclear(res);
@@ -144,15 +183,22 @@ void gen_preamble()
                      "#include <any>\n"
                      "#include <libpq-fe.h>\n"
                      "#include <Database.hpp>\n\n"
-                     "static bool dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
+                     "#define PASS(x) (x)\n\n"
+                     "static bool finalize_insert_op(PGresult *res) {\n"
+                     "        if (!res)\n"
+                     "                return false;\n"
+                     "        PQclear(res);\n"
+                     "        return true;\n"
+                     "}\n\n"
+                     "static PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
                      "{\n"
-                     "\tExecStatusType status;\n"
+                     "        ExecStatusType status;\n"
                      "        PGresult *res = db.query(query, &status);\n"
-                     "\tbool ok = true;\n"
-                     "\tif (status != assert_status)\n"
-                     "\t\tok = false;\n"
-                     "\tPQclear(res);\n"
-                     "\treturn ok;\n"
+                     "        if (status != assert_status) {\n"
+                     "                PQclear(res);\n"
+                     "                return NULL;\n"
+                     "        }\n"
+                     "        return res;\n"
                      "}\n\n";
 }
 
@@ -168,9 +214,23 @@ int main()
 
         gen_preamble();
 
+        std::map<std::string, type_mapping> type_map;
+        type_map["text"] = type_mapping{
+                .cpp = "std::string",
+                .function = "PASS"
+        };
+        type_map["int"] = type_mapping{
+                .cpp = "int",
+                .function = "std::stoi"
+        };
+        type_map["uuid"] = type_mapping{
+                .cpp = "std::string",
+                .function = "PASS"
+        };
+
         int status = 0;
 
-        if (generate_tables(conn) < 0)
+        if (generate_tables(conn, type_map) < 0)
                 status = -1;
 
         PQfinish(conn);
