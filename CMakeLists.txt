@@ -11,7 +11,7 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # --- DAO Code Generator ---
-add_executable(gen_dao codegen/gen.c)
+add_executable(gen_dao codegen/gen.cpp src/cfg/Config.cpp src/parser.cpp src/util.cpp)
 add_custom_command(TARGET gen_dao POST_BUILD
         COMMAND mkdir -p include/dao
         COMMAND gen_dao > include/dao/dao.h
@@ -22,6 +22,7 @@ add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util
 
 # Make the crow library directly #include-able
 target_include_directories(malphas PRIVATE vendor/crow)
+target_include_directories(gen_dao PRIVATE vendor/crow)
 
 # .. do the same for the headers in `include/`
 target_include_directories(malphas PRIVATE include)
@@ -39,6 +40,7 @@ if (UNIX)
     if (ASIO_INCLUDE_DIR)
         message("Successfully located the ASIO library.\n")
         target_include_directories(malphas PRIVATE ${ASIO_INCLUDE_DIR})
+        target_include_directories(gen_dao PRIVATE ${ASIO_INCLUDE_DIR})
     else ()
         message(FATAL_ERROR "Could not find the ASIO library")
     endif ()

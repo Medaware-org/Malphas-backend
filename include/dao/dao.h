@@ -27,7 +27,7 @@ struct user {
 };
 
 bool user_insert(Database &db, std::string id, std::string nickname, std::string passwd_hash) {
-	std::string query = "INSERT INTO user (id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" + passwd_hash + "\")";
+	std::string query = "INSERT INTO user(id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" + passwd_hash + "\")";
 	return dao_query(db, query, PGRES_COMMAND_OK);
 }
 
@@ -37,7 +37,7 @@ struct session {
 };
 
 bool session_insert(Database &db, std::string user_id, std::string session_token) {
-	std::string query = "INSERT INTO session (user_id, session_token) VALUES (" + user_id + ", \"" + session_token + "\")";
+	std::string query = "INSERT INTO session(user_id, session_token) VALUES (" + user_id + ", \"" + session_token + "\")";
 	return dao_query(db, query, PGRES_COMMAND_OK);
 }
 
