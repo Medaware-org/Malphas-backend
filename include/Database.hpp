@@ -3,6 +3,7 @@
 #include <libpq-fe.h>
 
 #include <string>
+#include <cfg/Config.hpp>
 
 /**
  * A high-level wrapper for performing database operations
@@ -26,6 +27,14 @@ class Database {
          * @returns <code>true</code> if connecting succeeded, or <code>false</code> in case it failed.
          */
         [[nodiscard]] bool connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port);
+
+        /**
+         * Same as the alternative connect function.
+         * @code
+         * bool connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port);
+         * @endcode
+         */
+        [[nodiscard]] bool connect(db_config &cfg);
 
         /**
          * Initialize the migration system by executing `migrations/init.sql` if needed

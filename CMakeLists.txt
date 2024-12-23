@@ -18,7 +18,6 @@ add_custom_command(TARGET gen_dao POST_BUILD
         COMMENT "Create the DAO directory and invoke the DAO generator")
 
 # --- Malphas Backend ---
-
 add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp)
 
 # Make the crow library directly #include-able
@@ -32,6 +31,7 @@ find_package(PostgreSQL REQUIRED)
 target_include_directories(malphas PRIVATE ${PostgreSQL_INCLUDE_DIRS})
 target_include_directories(malphas PRIVATE include/dao)
 target_include_directories(gen_dao PRIVATE ${PostgreSQL_INCLUDE_DIRS})
+target_include_directories(gen_dao PRIVATE include)
 
 # Locate the ASIO dev headers (only on UNIX systems!)
 if (UNIX)

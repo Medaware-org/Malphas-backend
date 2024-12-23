@@ -16,41 +16,14 @@ int main()
 {
         std::cout << banner << std::endl;
 
-        Config cfg = Config("config.cfg");
+        db_config cfg;
 
-        if (!cfg.parse())
-                return 1;
-
-        std::string db_user;
-        std::string db_password;
-        std::string db_db;
-        std::string db_host;
-        int db_port;
-
-#define ASSIGN(dst) [&](const std::string &prop) { dst = prop; return true; }
-
-        cfg.add_required("database.user", ASSIGN(db_user));
-        cfg.add_required("database.password", ASSIGN(db_password));
-        cfg.add_required("database.db", ASSIGN(db_db));
-        cfg.add_required("database.host", ASSIGN(db_host));
-        cfg.add_required("database.port", [&](const std::string &prop) {
-                try {
-                        size_t pos;
-                        db_port = std::stoi(prop, &pos);
-                        return pos == prop.size();
-                } catch (...) {
-                        return false;
-                }
-        });
-
-#undef ASSIGN
-
-        if (!cfg.validate())
+        if (!parse_db_config(&cfg))
                 return 1;
 
         Database db = Database();
 
-        if (!db.connect(db_user, db_password, db_db, db_host, db_port))
+        if (!db.connect(cfg))
                 return 1;
 
         if (!db.init_migrations())

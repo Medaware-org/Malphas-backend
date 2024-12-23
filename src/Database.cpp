@@ -13,6 +13,11 @@ Database::~Database()
         free(this->conn);
 }
 
+bool Database::connect(db_config &cfg)
+{
+        return connect(cfg.user, cfg.password, cfg.db, cfg.host, cfg.port);
+}
+
 bool Database::connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port)
 {
         std::string conn_str =

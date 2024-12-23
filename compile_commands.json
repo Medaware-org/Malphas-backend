@@ -1,7 +1,7 @@
 [
 {
   "directory": "/Users/piotrwyrw/Medaware/Malphas-backend",
-  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -I/opt/homebrew/include/postgresql@14 -I/opt/homebrew/include/postgresql@14/server -g -std=gnu11 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=15.1 -fcolor-diagnostics -o CMakeFiles/gen_dao.dir/codegen/gen.c.o -c /Users/piotrwyrw/Medaware/Malphas-backend/codegen/gen.c",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -I/opt/homebrew/include/postgresql@14 -I/opt/homebrew/include/postgresql@14/server -I/Users/piotrwyrw/Medaware/Malphas-backend/include -g -std=gnu11 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -mmacosx-version-min=15.1 -fcolor-diagnostics -o CMakeFiles/gen_dao.dir/codegen/gen.c.o -c /Users/piotrwyrw/Medaware/Malphas-backend/codegen/gen.c",
   "file": "/Users/piotrwyrw/Medaware/Malphas-backend/codegen/gen.c",
   "output": "CMakeFiles/gen_dao.dir/codegen/gen.c.o"
 },

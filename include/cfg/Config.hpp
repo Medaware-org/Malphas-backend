@@ -4,6 +4,7 @@
 #include <vector>
 #include <functional>
 #include <map>
+#include <crow_all.h>
 
 /**
  * A structure that represents a single configuration property
@@ -19,6 +20,17 @@ struct cfg_prop {
 
         bool operator==(const char *path) const;
 };
+
+struct db_config {
+        std::string user;
+        std::string password;
+        std::string db;
+        std::string host;
+        int port;
+
+};
+
+extern "C" [[nodiscard]] bool parse_db_config(db_config *dst);
 
 /**
  * Config file parser and validator.

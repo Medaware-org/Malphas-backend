@@ -1,5 +1,4 @@
 #include <cfg/Config.hpp>
-#include <crow_all.h>
 #include <cstdlib>
 #include <utility>
 #include <util.hpp>
@@ -8,6 +7,37 @@
 bool cfg_prop::operator==(const char *path) const
 {
         return path == (this->section + "." + this->key);
+}
+
+bool parse_db_config(db_config *dst)
+{
+        Config cfg = Config("config.cfg");
+
+        if (!cfg.parse())
+                return false;
+
+#define ASSIGN(dst) [&](const std::string &prop) { dst = prop; return true; }
+
+        cfg.add_required("database.user", ASSIGN(dst->user));
+        cfg.add_required("database.password", ASSIGN(dst->password));
+        cfg.add_required("database.db", ASSIGN(dst->db));
+        cfg.add_required("database.host", ASSIGN(dst->host));
+        cfg.add_required("database.port", [&](const std::string &prop) {
+                try {
+                        size_t pos;
+                        dst->port = std::stoi(prop, &pos);
+                        return pos == prop.size();
+                } catch (...) {
+                        return false;
+                }
+        });
+
+#undef ASSIGN
+
+        if (!cfg.validate())
+                return false;
+
+        return true;
 }
 
 Config::Config(const char *path) : path(path), _buffer(nullptr), parsed(false)
