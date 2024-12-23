@@ -5,6 +5,7 @@
 #include <functional>
 #include <map>
 #include <crow_all.h>
+#include <util.hpp>
 
 /**
  * A structure that represents a single configuration property
@@ -27,10 +28,9 @@ struct db_config {
         std::string db;
         std::string host;
         int port;
-
 };
 
-extern "C" [[nodiscard]] bool parse_db_config(db_config *dst);
+C_API [[nodiscard]] bool parse_db_config(db_config *dst);
 
 /**
  * Config file parser and validator.
