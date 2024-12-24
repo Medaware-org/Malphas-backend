@@ -48,8 +48,8 @@ bool user_insert(Database &db, std::string id, std::string nickname, std::string
 	return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-#define SPREAD_USER(user_struct) _struct.id, _struct.nickname, _struct.passwd_hash, 
-#define SPREAD_USER_PTR(user_struct) _struct->id, _struct->nickname, _struct->passwd_hash, 
+#define SPREAD_USER(user_struct) _struct.id, _struct.nickname, _struct.passwd_hash
+#define SPREAD_USER_PTR(user_struct) _struct->id, _struct->nickname, _struct->passwd_hash
 
 struct session {
 	std::string session_token;
@@ -68,6 +68,6 @@ bool session_insert(Database &db, std::string session_token, std::string user_id
 	return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-#define SPREAD_SESSION(session_struct) _struct.session_token, _struct.user_id, 
-#define SPREAD_SESSION_PTR(session_struct) _struct->session_token, _struct->user_id, 
+#define SPREAD_SESSION(session_struct) _struct.session_token, _struct.user_id
+#define SPREAD_SESSION_PTR(session_struct) _struct->session_token, _struct->user_id
 

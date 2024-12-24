@@ -63,7 +63,7 @@ void emit_spread_macro(const std::string &table, const std::map<std::string, std
         int index = 0;
         for (const auto &[column, type]: layout) {
                 std::cout << "_struct." << column;
-                if (index + 1 < nFields)
+                if ((index ++) + 1 < nFields)
                         std::cout << ", ";
         }
         std::cout << std::endl;
@@ -72,7 +72,7 @@ void emit_spread_macro(const std::string &table, const std::map<std::string, std
         std::cout << "#define SPREAD_" << upper_table << "_PTR(" << table << "_struct" << ") ";
         for (const auto &[column, type]: layout) {
                 std::cout << "_struct->" << column;
-                if (index + 1 < nFields)
+                if ((index ++) + 1 < nFields)
                         std::cout << ", ";
         }
 
