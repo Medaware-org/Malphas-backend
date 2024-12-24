@@ -7,6 +7,7 @@
 
 #include <string>
 #include <iostream>
+#include <algorithm>
 #include <format>
 #include <cfg/Config.hpp>
 #include <libpq-fe.h>
@@ -50,6 +51,34 @@ void emit_struct(const std::string &table, const std::map<std::string, std::stri
                 std::cout << "\t" << map_types(type, type_mappings).cpp << " " << column << ";" << std::endl;
         std::cout << "};\n\n";
 }
+
+void emit_spread_macro(const std::string &table, const std::map<std::string, std::string> &layout, const std::map<std::string, type_mapping> &type_mappings)
+{
+        std::string upper_table = std::string(table);
+        std::transform(table.begin(), table.end(), upper_table.begin(), ::toupper);
+
+        size_t nFields = layout.size();
+
+        std::cout << "#define SPREAD_" << upper_table << "(" << table << "_struct" << ") ";
+        int index = 0;
+        for (const auto &[column, type]: layout) {
+                std::cout << "_struct." << column;
+                if (index + 1 < nFields)
+                        std::cout << ", ";
+        }
+        std::cout << std::endl;
+
+        index = 0;
+        std::cout << "#define SPREAD_" << upper_table << "_PTR(" << table << "_struct" << ") ";
+        for (const auto &[column, type]: layout) {
+                std::cout << "_struct->" << column;
+                if (index + 1 < nFields)
+                        std::cout << ", ";
+        }
+
+        std::cout << "\n\n";
+}
+
 
 /*
  * Generate an insert function for a given table
@@ -105,7 +134,8 @@ void emit_dao_mapper(const std::string &table, const std::map<std::string, std::
         int index = 0;
         for (const auto &[column, type]: layout) {
                 type_mapping mapping = map_types(type, type_mappings);
-                std::cout << "\t\t." << column << " = " << mapping.function <<  "(PQgetvalue(result, tuple," << (index++) << "))," << std::endl;
+                std::cout << "\t\t." << column << " = " << mapping.function << "(PQgetvalue(result, tuple," << (index++)
+                          << "))," << std::endl;
         }
 
         std::cout << "\t};\n}\n\n";
@@ -114,7 +144,7 @@ void emit_dao_mapper(const std::string &table, const std::map<std::string, std::
 
 int serialise_table(PGconn *conn, std::string &table, const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::string query = std::format("select * from information_schema.columns where table_name = '{}'", table);
+        std::string query = std::format("SELECT * FROM information_schema.columns WHERE table_name = '{}'", table);
         PGresult *res = PQexec(conn, query.c_str());
 
         if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -143,12 +173,15 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
         // Emit insert function
         emit_insert(table, fields, type_mappings);
 
+        // Emit the utility spread macros
+        emit_spread_macro(table, fields, type_mappings);
+
         return 0;
 }
 
 int generate_tables(PGconn *conn, const std::map<std::string, type_mapping> &type_mappings)
 {
-        const std::string query = "select * from information_schema.tables where table_schema = 'public'";
+        const std::string query = "SELECT * FROM information_schema.tables WHERE table_schema = 'public'";
         PGresult *res = PQexec(conn, query.c_str());
 
         if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -184,13 +217,13 @@ void gen_preamble()
                      "#include <libpq-fe.h>\n"
                      "#include <Database.hpp>\n\n"
                      "#define PASS(x) (x)\n\n"
-                     "static bool finalize_insert_op(PGresult *res) {\n"
+                     "bool finalize_insert_op(PGresult *res) {\n"
                      "        if (!res)\n"
                      "                return false;\n"
                      "        PQclear(res);\n"
                      "        return true;\n"
                      "}\n\n"
-                     "static PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
+                     "PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
                      "{\n"
                      "        ExecStatusType status;\n"
                      "        PGresult *res = db.query(query, &status);\n"
@@ -215,18 +248,17 @@ int main()
         gen_preamble();
 
         std::map<std::string, type_mapping> type_map;
-        type_map["text"] = type_mapping{
-                .cpp = "std::string",
-                .function = "PASS"
+
+        auto map_type = [&type_map](const std::string &sql_type, const std::string &cpp_type, const std::string &conv_fun) {
+                type_map[sql_type] = type_mapping{
+                        .cpp = cpp_type,
+                        .function = conv_fun
+                };
         };
-        type_map["int"] = type_mapping{
-                .cpp = "int",
-                .function = "std::stoi"
-        };
-        type_map["uuid"] = type_mapping{
-                .cpp = "std::string",
-                .function = "PASS"
-        };
+
+        map_type("text", "std::string", "PASS");
+        map_type("int", "int", "std::stoi");
+        map_type("uuid", "std::string", "PASS");
 
         int status = 0;
 

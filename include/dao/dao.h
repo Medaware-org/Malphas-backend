@@ -11,15 +11,14 @@
 
 #define PASS(x) (x)
 
-static bool finalize_insert_op(PGresult *res)
-{
+bool finalize_insert_op(PGresult *res) {
         if (!res)
                 return false;
         PQclear(res);
         return true;
 }
 
-static PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)
+PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)
 {
         ExecStatusType status;
         PGresult *res = db.query(query, &status);
@@ -31,45 +30,44 @@ static PGresult *dao_query(Database &db, std::string query, ExecStatusType asser
 }
 
 struct user {
-        std::string id;
-        std::string nickname;
-        std::string passwd_hash;
+	std::string id;
+	std::string nickname;
+	std::string passwd_hash;
 };
 
-static user dao_map_user(PGresult *result, int tuple)
-{
-        return user{
-                .id = PASS(PQgetvalue(result, tuple, 0)),
-                .nickname = PASS(PQgetvalue(result, tuple, 1)),
-                .passwd_hash = PASS(PQgetvalue(result, tuple, 2)),
-        };
+static user dao_map_user(PGresult *result, int tuple) {
+	return user {
+		.id = PASS(PQgetvalue(result, tuple,0)),
+		.nickname = PASS(PQgetvalue(result, tuple,1)),
+		.passwd_hash = PASS(PQgetvalue(result, tuple,2)),
+	};
 }
 
-bool user_insert(Database &db, std::string id, std::string nickname, std::string passwd_hash)
-{
-        std::string query =
-                "INSERT INTO user (id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" +
-                passwd_hash + "\")";
-        return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
+bool user_insert(Database &db, std::string id, std::string nickname, std::string passwd_hash) {
+	std::string query = "INSERT INTO user (id, nickname, passwd_hash) VALUES (" + id + ", \"" + nickname + "\", \"" + passwd_hash + "\")";
+	return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
+
+#define SPREAD_USER(user_struct) _struct.id, _struct.nickname, _struct.passwd_hash, 
+#define SPREAD_USER_PTR(user_struct) _struct->id, _struct->nickname, _struct->passwd_hash, 
 
 struct session {
-        std::string session_token;
-        std::string user_id;
+	std::string session_token;
+	std::string user_id;
 };
 
-static session dao_map_session(PGresult *result, int tuple)
-{
-        return session{
-                .session_token = PASS(PQgetvalue(result, tuple, 0)),
-                .user_id = PASS(PQgetvalue(result, tuple, 1)),
-        };
+static session dao_map_session(PGresult *result, int tuple) {
+	return session {
+		.session_token = PASS(PQgetvalue(result, tuple,0)),
+		.user_id = PASS(PQgetvalue(result, tuple,1)),
+	};
 }
 
-bool session_insert(Database &db, std::string session_token, std::string user_id)
-{
-        std::string query =
-                "INSERT INTO session (session_token, user_id) VALUES (\"" + session_token + "\", " + user_id + ")";
-        return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
+bool session_insert(Database &db, std::string session_token, std::string user_id) {
+	std::string query = "INSERT INTO session (session_token, user_id) VALUES (\"" + session_token + "\", " + user_id + ")";
+	return finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
+
+#define SPREAD_SESSION(session_struct) _struct.session_token, _struct.user_id, 
+#define SPREAD_SESSION_PTR(session_struct) _struct->session_token, _struct->user_id, 
 
