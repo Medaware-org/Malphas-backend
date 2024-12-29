@@ -412,6 +412,10 @@ Testing/
 .ninja_log
 build.ninja
 .idea/
+build/
 
 # VCPKG
 vcpkg_installed/
+
+# Malphas
+gen_dao
