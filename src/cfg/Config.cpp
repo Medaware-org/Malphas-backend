@@ -11,7 +11,7 @@ bool cfg_prop::operator==(const char *path) const
 
 bool parse_db_config(db_config *dst)
 {
-        Config cfg = Config("config.cfg");
+        Config cfg = Config("config/malphas.cfg");
 
         if (!cfg.parse())
                 return false;

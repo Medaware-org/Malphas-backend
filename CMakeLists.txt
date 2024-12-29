@@ -12,6 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # --- DAO Code Generator ---
 add_executable(gen_dao codegen/gen.cpp src/cfg/Config.cpp src/parser.cpp src/util.cpp)
+
 add_custom_command(TARGET gen_dao POST_BUILD
         COMMAND mkdir -p include/dao
         COMMAND gen_dao > include/dao/dao.h
