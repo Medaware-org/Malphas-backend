@@ -34,16 +34,6 @@ int main()
         if (!db.run_migrations())
                 return 1;
 
-        user u = {
-                .id = "f23ce73e-6d92-4bf4-9c53-881dc59df1e0", .passwd_hash = "Loisndfiushdfyuibsuifb",
-                .nickname = "piotrwyrw"
-        };
-
-        user_insert(db, SPREAD_USER(u));
-
-        std::vector<user> users;
-        get_all_user(db, users);
-
         crow::App<AuthFilter> app;
 
         app.loglevel(crow::LogLevel::Info);
