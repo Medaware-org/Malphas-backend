@@ -9,7 +9,7 @@
 #include <libpq-fe.h>
 #include <Database.hpp>
 
-#define PASS(x) (x)
+#define NO_CAST(x) (x)
 
 bool finalize_insert_op(PGresult *res) {
         if (!res)
@@ -44,9 +44,9 @@ struct user {
 
 static user dao_map_user(PGresult *result, int tuple) {
 	return user {
-		.id = PASS(PQgetvalue(result, tuple,0)),
-		.nickname = PASS(PQgetvalue(result, tuple,1)),
-		.passwd_hash = PASS(PQgetvalue(result, tuple,2)),
+		.id = NO_CAST(PQgetvalue(result, tuple,0)),
+		.nickname = NO_CAST(PQgetvalue(result, tuple,1)),
+		.passwd_hash = NO_CAST(PQgetvalue(result, tuple,2)),
 	};
 }
 
@@ -83,8 +83,8 @@ struct session {
 
 static session dao_map_session(PGresult *result, int tuple) {
 	return session {
-		.session_token = PASS(PQgetvalue(result, tuple,0)),
-		.user_id = PASS(PQgetvalue(result, tuple,1)),
+		.session_token = NO_CAST(PQgetvalue(result, tuple,0)),
+		.user_id = NO_CAST(PQgetvalue(result, tuple,1)),
 	};
 }
 

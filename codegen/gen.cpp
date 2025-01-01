@@ -314,7 +314,7 @@ void gen_preamble()
                 "#include <any>\n"
                 "#include <libpq-fe.h>\n"
                 "#include <Database.hpp>\n\n"
-                "#define PASS(x) (x)\n\n"
+                "#define NO_CAST(x) (x)\n\n"
                 "bool finalize_insert_op(PGresult *res) {\n"
                 "        if (!res)\n"
                 "                return false;\n"
@@ -361,9 +361,9 @@ int main()
                 };
         };
 
-        map_type("text", "std::string", "PASS");
+        map_type("text", "std::string", "NO_CAST");
         map_type("int", "int", "std::stoi");
-        map_type("uuid", "std::string", "PASS");
+        map_type("uuid", "std::string", "NO_CAST");
 
         int status = 0;
 

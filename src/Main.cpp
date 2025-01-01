@@ -1,8 +1,8 @@
 #include <cfg/Config.hpp>
 #include <Database.hpp>
+#define CROW_ENABLE_SSL
 #include <crow_all.h>
 #include <iostream>
-#include <dao/dao.h>
 #include <middleware/AuthFilter.hpp>
 
 auto banner = "  __  __       _       _               \n"
@@ -34,11 +34,17 @@ int main()
         if (!db.run_migrations())
                 return 1;
 
-        crow::App<AuthFilter> app;
+        crow::App<AuthFilter> app(
+                AuthFilter({"^/", "^/login", "^/register"})
+        );
 
         app.loglevel(crow::LogLevel::Info);
 
         CROW_ROUTE(app, "/")([]() {
+                return "Hello world";
+        });
+
+        CROW_ROUTE(app, "/secured")([]() {
                 return "Hello world";
         });
 
