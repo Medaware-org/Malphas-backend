@@ -379,9 +379,10 @@ body:
         std::cout << "\tPGresult *res = dao_query(db, query, PGRES_TUPLES_OK);" << std::endl;
         std::cout << "\tif (!res) return false;" << std::endl;
 
-        if (function.type == SELECT_SINGLE)
+        if (function.type == SELECT_SINGLE) {
+                std::cout << "\tif (PQntuples(res) != 1) {\n\t\tPQclear(res);\n\t\treturn false;\n\t}" << std::endl;
                 std::cout << "\t*dst = dao_map_" << function.type_mapping << "(res, 0);" << std::endl;
-        else {
+        } else {
                 std::cout << "\tdao_map_all<" << function.type_mapping <<
                         ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << function.type_mapping <<
                         "(res, tuple); });" << std::endl;

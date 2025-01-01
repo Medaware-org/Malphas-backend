@@ -127,6 +127,10 @@ bool get_session_user(Database &db, user *dst, std::string user_id)
 	std::string query = "SELECT * FROM \"user\" u inner join session s on s.user_id = u.id where s.session_token = \"" + user_id + "\";";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
 	*dst = dao_map_user(res, 0);
 	PQclear(res);
 	return 0;
