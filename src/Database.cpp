@@ -13,7 +13,7 @@ Database::~Database()
         free(this->conn);
 }
 
-bool Database::connect(db_config &cfg)
+bool Database::connect(DbConfig &cfg)
 {
         return connect(cfg.user, cfg.password, cfg.db, cfg.host, cfg.port);
 }

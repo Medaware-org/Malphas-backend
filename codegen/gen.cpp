@@ -25,7 +25,7 @@ struct table_field {
 
 bool needs_quotes(const std::string &type)
 {
-        return type == "text" || type.find("varchar") != std::string::npos || type == "uuid";
+        return type == "text" || type.find("varchar") != std::string::npos || type == "uuid" || type == "std::string";
 }
 
 PGconn *connect_db(std::string user, std::string password, std::string db, std::string host, int port)
@@ -172,6 +172,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         std::cout << query_str;
         std::cout << exec_invoke << std::endl;
         std::cout << "\t*dst = dao_map_" << table << "(res, 0);" << std::endl;
+        std::cout << "\tPQclear(res);" << std::endl;
         std::cout << "\treturn true;" << std::endl;
         std::cout << "}\n\n";
 
@@ -181,6 +182,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         std::cout << exec_invoke << std::endl;
         std::cout << "\tdao_map_all<" << table << ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << table <<
                 "(res, tuple); });" << std::endl;
+        std::cout << "\tPQclear(res);" << std::endl;
         std::cout << "\treturn true;" << std::endl;
         std::cout << "}\n\n";
 }
@@ -257,13 +259,13 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
         // Emit the struct
         emit_struct(table, fields, type_mappings);
 
-        // Mapper
+        // Emit mapper
         emit_dao_mapper(table, fields, type_mappings);
 
-        // Emit insert function
+        // Emit insert
         emit_insert(table, fields, type_mappings);
 
-        // Emit retrieval function
+        // Emit basic select functions
         if (primary_keys.empty())
                 std::cout << "//\n// The table '" << table <<
                         "' is not selectable, for it has no primary keys.\n//\n"
@@ -299,6 +301,106 @@ int generate_tables(PGconn *conn, const std::map<std::string, type_mapping> &typ
                         return -1;
         }
         PQclear(res);
+        return 0;
+}
+
+int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
+{
+        std::string return_type = (function.type == SELECT_SINGLE)
+                                          ? (function.type_mapping + " *")
+                                          : ("std::vector<" + function.type_mapping + "> &");
+
+        std::cout << "bool " << function.identifier << "(Database &db, " << return_type << "dst";
+
+        int n;
+
+        if (function.params.empty())
+                goto body;
+
+        std::cout << ", ";
+
+        n = 0;
+        for (const auto &[iden, type]: function.params) {
+                std::cout << type << " " << iden;
+                if (function.params.size() < (n++))
+                        std::cout << ", ";
+        }
+
+body:
+        std::cout << ")" << std::endl << "{" << std::endl;
+
+        std::string rawQuery = function.query;
+
+        // Sanitize quotes
+        size_t pos = 0;
+        while (pos < rawQuery.size()) {
+                pos = rawQuery.find('\"', pos);
+                if (pos == std::string::npos)
+                        break;
+                rawQuery.replace(pos, 1, "\\\"");
+                pos += 2;
+        }
+
+        rawQuery = '\"' + rawQuery + '\"';
+
+        std::string query;
+        pos = 0;
+        int nParam = 0;
+
+        while (!rawQuery.empty()) {
+                pos = rawQuery.find('?');
+                if (pos == std::string::npos) {
+                        query.append(rawQuery);
+                        break;
+                }
+                query.append(rawQuery.substr(0, pos));
+                rawQuery.erase(0, pos + 1);
+                if (nParam >= function.params.size()) {
+                        CROW_LOG_CRITICAL << "Ran out of parameters when parsing query of function '"
+                        << function.identifier << "'.";
+                        return -1;
+                }
+                auto param = std::next(function.params.begin(), (nParam++));
+                bool quotes = needs_quotes(param->second);
+
+                if (quotes)
+                        query.append("\\\"");
+
+                query.append("\" + " + param->first);
+
+                if (pos < rawQuery.size() || quotes)
+                        query.append(" + \"");
+
+                if (quotes)
+                        query.append("\\\"");
+        }
+
+        std::cout << "\tstd::string query = " << query << ";" << std::endl;
+        std::cout << "\tPGresult *res = dao_query(db, query, PGRES_TUPLES_OK);" << std::endl;
+        std::cout << "\tif (!res) return false;" << std::endl;
+
+        if (function.type == SELECT_SINGLE)
+                std::cout << "\t*dst = dao_map_" << function.type_mapping << "(res, 0);" << std::endl;
+        else {
+                std::cout << "\tdao_map_all<" << function.type_mapping <<
+                        ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << function.type_mapping <<
+                        "(res, tuple); });" << std::endl;
+        }
+
+        std::cout << "\tPQclear(res);" << std::endl;
+        std::cout << "\treturn 0;" << std::endl;
+        std::cout << "}" << std::endl;
+        return 0;
+}
+
+int generate_custom_dao_functions(PGconn *conn, const DaoConfig &config)
+{
+        std::cout << "//\n// Custom Functions\n//\n\n";
+
+        for (const auto &function: config.functions)
+                if (generate_custom_dao_function(conn, function) < 0)
+                        return -1;
+
         return 0;
 }
 
@@ -341,13 +443,19 @@ void gen_preamble()
 
 int main()
 {
-        db_config cfg;
+        DbConfig cfg;
         if (!parse_db_config(&cfg))
                 return 1;
 
         PGconn *conn = connect_db(cfg.user, cfg.password, cfg.db, cfg.host, cfg.port);
         if (!conn)
                 return 1;
+
+        DaoConfig dao_cfg;
+        if (!parse_dao_config(&dao_cfg)) {
+                PQfinish(conn);
+                return 1;
+        }
 
         gen_preamble();
 
@@ -368,6 +476,9 @@ int main()
         int status = 0;
 
         if (generate_tables(conn, type_map) < 0)
+                status = -1;
+
+        if (generate_custom_dao_functions(conn, dao_cfg) < 0)
                 status = -1;
 
         PQfinish(conn);

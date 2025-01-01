@@ -18,7 +18,7 @@ int main()
 {
         std::cout << banner << std::endl;
 
-        db_config cfg;
+        DbConfig cfg;
 
         if (!parse_db_config(&cfg))
                 return 1;
@@ -35,7 +35,7 @@ int main()
                 return 1;
 
         crow::App<AuthFilter> app(
-                AuthFilter({"^/", "^/login", "^/register"})
+                AuthFilter({"^/", "^/login", "^/register"}, db)
         );
 
         app.loglevel(crow::LogLevel::Info);

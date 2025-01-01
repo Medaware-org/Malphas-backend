@@ -61,6 +61,7 @@ bool get_one_user(Database &db, user *dst, std::string id)
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	*dst = dao_map_user(res, 0);
+	PQclear(res);
 	return true;
 }
 
@@ -70,6 +71,7 @@ bool get_all_user(Database &db, std::vector<user> &dst)
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	dao_map_all<user>(res, dst, [](auto *res, auto tuple) { return dao_map_user(res, tuple); });
+	PQclear(res);
 	return true;
 }
 
@@ -99,6 +101,7 @@ bool get_one_session(Database &db, session *dst, std::string session_token)
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	*dst = dao_map_session(res, 0);
+	PQclear(res);
 	return true;
 }
 
@@ -108,9 +111,23 @@ bool get_all_session(Database &db, std::vector<session> &dst)
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
+	PQclear(res);
 	return true;
 }
 
 #define SPREAD_SESSION(session_struct) session_struct.session_token, session_struct.user_id
 #define SPREAD_SESSION_PTR(session_struct) session_struct->session_token, session_struct->user_id
 
+//
+// Custom Functions
+//
+
+bool get_session_user(Database &db, user *dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM \"user\" u inner join session s on s.user_id = u.id where s.session_token = \"" + user_id + "\";";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return 0;
+}

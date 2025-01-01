@@ -14,7 +14,7 @@
  * key = value
  * @endcode
  */
-struct cfg_prop {
+struct CfgProperty {
         std::string key;
         std::string value;
         std::string section;
@@ -22,7 +22,33 @@ struct cfg_prop {
         bool operator==(const char *path) const;
 };
 
-struct db_config {
+enum DaoSelectType {
+        SELECT_SINGLE,
+        SELECT_MULTI
+};
+
+/**
+ * Represents a single SELECT function
+ */
+struct DaoFunction {
+        DaoSelectType type;
+        std::string identifier;
+        std::string query;
+        std::string type_mapping;
+        std::map<std::string, std::string> params;
+};
+
+/**
+ * A structure that represents the configuration used for generating
+ * select functions for retrieving DAOs from the database
+ */
+struct DaoConfig {
+        std::vector<DaoFunction> functions;
+};
+
+[[nodiscard]] bool parse_dao_config(DaoConfig *dst);
+
+struct DbConfig {
         std::string user;
         std::string password;
         std::string db;
@@ -30,55 +56,60 @@ struct db_config {
         int port;
 };
 
-C_API [[nodiscard]] bool parse_db_config(db_config *dst);
+[[nodiscard]] bool parse_db_config(DbConfig *dst);
 
 /**
  * Config file parser and validator.
  */
 class Config {
-    private:
-        std::vector<cfg_prop> props;
-        const char *path;
-        char *_buffer;
-        unsigned int buff_len;
-        bool parsed;
-    private:
-        std::unordered_map<std::string, std::function<bool(std::string)>> required;
-    public:
-        Config(const char *path);
+        private:
+                std::vector<CfgProperty> props;
+                const char *path;
+                char *_buffer;
+                unsigned int buff_len;
+                bool parsed;
 
-        ~Config();
+        private:
+                std::unordered_map<std::string, std::function<bool(std::string)> > required;
 
-        /**
-         * Adds a required field to the validator
-         * @param str The parameter identifier in the form <code>section.key</code>
-         */
-        void add_required(const std::string &str);
+        public:
+                Config(const char *path);
 
-        /**
-         * Adds a required field with a custom value validation function to the validator.
-         * @param str The parameter identifier in the form <code>section.key</code>
-         * @param validation The validation function. The property will not pass validation if the function
-         * returns <code>false</code>
-         */
-        void add_required(const std::string &str, std::function<bool(std::string)> validation);
+                ~Config();
 
-        /**
-         * Parse the configuration file. This does <b>not</b> perform config validation.
-         * @returns <code>true</code> if parsing succeeded, otherwise <code>false</code>.
-         */
-        [[nodiscard]] bool parse();
+                /**
+                 * Adds a required field to the validator
+                 * @param str The parameter identifier in the form <code>section.key</code>
+                 */
+                void add_required(const std::string &str);
 
-        /**
-         * Perform config validation. For the process to work properly, <code>parse()</code> must be invoked
-         * beforehand.
-         * @returns <code>true</code> if the config is valid, otherwise <code>false</code>.
-         */
-        [[nodiscard]] bool validate();
+                /**
+                 * Adds a required field with a custom value validation function to the validator.
+                 * @param str The parameter identifier in the form <code>section.key</code>
+                 * @param validation The validation function. The property will not pass validation if the function
+                 * returns <code>false</code>
+                 */
+                void add_required(const std::string &str, std::function<bool(std::string)> validation);
 
-        /**
-         * Retrieve the value of a property.
-         * @param path The path of the property in the form <code>section.key</code>
-         */
-        [[nodiscard]] std::string operator[](const char *path);
+                /**
+                 * Parse the configuration file. This does <b>not</b> perform config validation.
+                 * @returns <code>true</code> if parsing succeeded, otherwise <code>false</code>.
+                 */
+                [[nodiscard]] bool parse();
+
+                /**
+                 * Perform config validation. For the process to work properly, <code>parse()</code> must be invoked
+                 * beforehand.
+                 * @returns <code>true</code> if the config is valid, otherwise <code>false</code>.
+                 */
+                [[nodiscard]] bool validate();
+
+                /**
+                 * Retrieve the value of a property.
+                 * @param path The path of the property in the form <code>section.key</code>
+                 */
+                [[nodiscard]] std::string operator[](const char *path);
+                [[nodiscard]] std::string operator[](const std::string &path);
+
+                [[nodiscard]] std::unordered_map<std::string, CfgProperty> get_sections() const;
 };

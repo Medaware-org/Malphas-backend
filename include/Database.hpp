@@ -34,7 +34,7 @@ class Database {
          * bool connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port);
          * @endcode
          */
-        [[nodiscard]] bool connect(db_config &cfg);
+        [[nodiscard]] bool connect(DbConfig &cfg);
 
         /**
          * Initialize the migration system by executing `migrations/init.sql` if needed

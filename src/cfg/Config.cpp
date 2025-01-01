@@ -4,12 +4,93 @@
 #include <util.hpp>
 #include <parser.hpp>
 
-bool cfg_prop::operator==(const char *path) const
+bool CfgProperty::operator==(const char *path) const
 {
         return path == (this->section + "." + this->key);
 }
 
-bool parse_db_config(db_config *dst)
+static bool parse_params(const std::string &str, std::map<std::string, std::string> &dst)
+{
+        std::string paramStr = std::string(str);
+
+        size_t pos = 0;
+
+        const std::string internal_delim = "=";
+        const std::string param_delim = ";";
+
+        while (!paramStr.empty()) {
+                pos = paramStr.find(internal_delim);
+                if (pos == std::string::npos)
+                        return false; // Param string is not empty, but there is no internal delim to be found
+                std::string identifier = paramStr.substr(0, pos);
+                paramStr.erase(0, pos + internal_delim.length());
+                pos = paramStr.find(param_delim);
+                if (pos == std::string::npos)
+                        return false; // A param delim is needed to determine the end of the C++ type
+                std::string type = paramStr.substr(0, pos);
+                paramStr.erase(0, pos + param_delim.length());
+                dst.emplace(identifier, type);
+        }
+
+        return true;
+}
+
+bool parse_dao_config(DaoConfig *dst)
+{
+        Config cfg = Config("config/daos.cfg");
+
+        if (!cfg.parse())
+                return false;
+
+        auto sections = cfg.get_sections();
+        for (auto section: sections) {
+                DaoFunction function;
+                function.identifier = section.first;
+
+                function.query = cfg[section.first + ".query"];
+                if (function.query.empty()) {
+                        CROW_LOG_CRITICAL << "The SQL query of function '" << section.first << "' must not be empty.";
+                        return false;
+                }
+
+                function.type_mapping = cfg[section.first + ".mapping"];
+                if (function.type_mapping.empty()) {
+                        CROW_LOG_CRITICAL << "The type mapping of function '"
+                        << section.first << "' must not be empty.";
+                        return false;
+                }
+
+                std::string selectType = cfg[section.first + ".type"];
+                if (selectType != "single" && selectType != "multiple") {
+                        CROW_LOG_CRITICAL << "The select type of function '"
+                        << section.first << "' must either be 'single' or 'multiple'.";
+                        return false;
+                }
+
+                function.type = (selectType == "single") ? SELECT_SINGLE : SELECT_MULTI;
+
+                std::string paramStr = cfg[section.first + ".params"];
+
+                // A select function may have empty params; this is permitted.
+                if (paramStr.empty()) {
+                        function.params.clear();
+                        goto push;
+                }
+
+                if (!parse_params(cfg[section.first + ".params"], function.params)) {
+                        CROW_LOG_CRITICAL << "Could not parse parameter string for function '"
+                        << section.first << "'";
+                        return false;
+                }
+
+        push:
+                dst->functions.push_back(function);
+        }
+
+        return true;
+}
+
+bool parse_db_config(DbConfig *dst)
 {
         Config cfg = Config("config/malphas.cfg");
 
@@ -148,7 +229,7 @@ bool Config::parse()
                         return false;
                 }
 
-                props.push_back(cfg_prop{
+                props.push_back(CfgProperty{
                         .key = key,
                         .value = value,
                         .section = section
@@ -179,7 +260,7 @@ bool Config::validate()
         std::unordered_map<std::string, bool> statuses;
         for (auto &[key, value]: required)
                 statuses[key] = false;
-        std::for_each(this->props.begin(), this->props.end(), [&](cfg_prop &prop) {
+        std::for_each(this->props.begin(), this->props.end(), [&](CfgProperty &prop) {
                 std::string key = prop.section + "." + prop.key;
                 if (statuses.find(key) == statuses.end()) {
                         CROW_LOG_CRITICAL << "Unknown configuration property: " << key;
@@ -204,6 +285,14 @@ bool Config::validate()
         return ok;
 }
 
+std::unordered_map<std::string, CfgProperty> Config::get_sections() const
+{
+        std::unordered_map<std::string, CfgProperty> sections;
+        for (const auto &prop: props)
+                sections[prop.section] = prop;
+        return sections;
+}
+
 std::string Config::operator[](const char *path)
 {
         for (auto &prop: this->props)
@@ -211,4 +300,9 @@ std::string Config::operator[](const char *path)
                         return prop.value;
 
         return "";
+}
+
+std::string Config::operator[](const std::string &path)
+{
+        return operator[](path.c_str());
 }
