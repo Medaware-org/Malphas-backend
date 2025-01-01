@@ -76,7 +76,7 @@ void emit_spread_macro(const std::string &table, const std::map<std::string, tab
         int index = 0;
         for (const auto &[column, field]: layout) {
                 std::cout << table << "_struct." << column;
-                if ((index++) + 1 < nFields)
+                if ((++index) < nFields)
                         std::cout << ", ";
         }
         std::cout << std::endl;
@@ -85,7 +85,7 @@ void emit_spread_macro(const std::string &table, const std::map<std::string, tab
         std::cout << "#define SPREAD_" << upper_table << "_PTR(" << table << "_struct" << ") ";
         for (const auto &[column, type]: layout) {
                 std::cout << table << "_struct->" << column;
-                if ((index++) + 1 < nFields)
+                if ((++index) < nFields)
                         std::cout << ", ";
         }
 
@@ -106,14 +106,14 @@ void emit_insert(const std::string &table, const std::map<std::string, table_fie
         for (const auto &[column, field]: layout) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
-                std::cout << (((index++) + 1 < layout.size()) ? ", " : ") {\n");
+                std::cout << (((++index) < layout.size()) ? ", " : ") {\n");
         }
 
         std::cout << "\tstd::string query = \"INSERT INTO \\\"" << table << "\\\" (";
         index = 0;
         for (const auto &[column, field]: layout) {
                 std::cout << column;
-                std::cout << (((index++) + 1 < nTuples) ? ", " : ") VALUES (");
+                std::cout << (((++index) < nTuples) ? ", " : ") VALUES (");
         }
 
         index = 0;
@@ -128,10 +128,121 @@ void emit_insert(const std::string &table, const std::map<std::string, table_fie
                 if (quotes)
                         std::cout << "'";
 
-                std::cout << (((index++) + 1 < nTuples) ? ", " : ")\";\n");
+                std::cout << (((++index) < nTuples) ? ", " : ")\";\n");
         }
 
-        std::cout << "\treturn finalize_insert_op(dao_query(db, query, PGRES_COMMAND_OK));" << std::endl;
+        std::cout << "\treturn finalize_op(dao_query(db, query, PGRES_COMMAND_OK));" << std::endl;
+        std::cout << "}\n\n";
+}
+
+void emit_update(const std::string &table, const std::map<std::string, table_field> &layout,
+                 const std::map<std::string, type_mapping> &type_mappings)
+{
+        std::map<std::string, table_field> filtered_layout;
+        std::copy_if(layout.begin(), layout.end(), std::inserter(filtered_layout, filtered_layout.begin()),
+                     [&](const auto &pair) {
+                             return !pair.second.is_primary;
+                     });
+
+        if (filtered_layout.empty()) {
+                std::cout << "// No update function for '" << table << "': The table only has primary key fields." <<
+                        std::endl;
+                return;
+        }
+
+        std::map<std::string, table_field> primary_keys;
+        std::copy_if(layout.begin(), layout.end(), std::inserter(primary_keys, primary_keys.begin()),
+                     [&](const auto &pair) {
+                             return pair.second.is_primary;
+                     });
+
+        std::cout << "bool " << table << "_update(Database &db, ";
+        int index = 0;
+        for (const auto &[column, field]: layout) {
+                std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
+                        column;
+                std::cout << (((++index) < layout.size()) ? ", " : ")\n{\n");
+        }
+
+        std::cout << "\tstd::string query = \"UPDATE \\\"" << table << "\\\" SET ";
+
+        index = 0;
+        for (const auto &[column, field]: filtered_layout) {
+                bool quotes = needs_quotes(field.type);
+
+                std::cout << column << " = ";
+
+                if (quotes)
+                        std::cout << "'";
+
+                std::cout << "\" + " << column << " + \"";
+
+                if (quotes)
+                        std::cout << "'";
+
+                std::cout << (((++index) < filtered_layout.size()) ? ", " : "");
+        }
+
+        std::cout << " WHERE ";
+        index = 0;
+        for (const auto &[column, field]: primary_keys) {
+                bool quotes = needs_quotes(field.type);
+                std::cout << column << " = ";
+                if (quotes)
+                        std::cout << "'";
+
+                std::cout << "\" + " << column << " + \"";
+
+                if (quotes)
+                        std::cout << "'";
+
+                if ((++index) < primary_keys.size())
+                        std::cout << " AND ";
+        }
+        std::cout << ";\";" << std::endl;
+
+        std::cout << "\treturn finalize_op(dao_query(db, query, PGRES_COMMAND_OK));" << std::endl;
+        std::cout << "}\n\n";
+}
+
+void emit_save(const std::string &table, const std::map<std::string, table_field> &layout,
+               const std::map<std::string, type_mapping> &type_mappings)
+{
+        std::cout << "bool " << table << "_save(Database &db, ";
+
+        std::vector<std::string> pk_vec;
+        std::vector<std::string> param_vec;
+
+        int index = 0;
+        for (const auto &[column, field]: layout) {
+                param_vec.push_back(column);
+                if (field.is_primary)
+                        pk_vec.push_back(column);
+                std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
+                        column;
+                std::cout << (((++index) < layout.size()) ? ", " : ")\n{\n");
+        }
+
+        index = 0;
+        std::string sequence;
+        for (const auto &param: param_vec) {
+                sequence.append(param);
+                if ((++index) < param_vec.size())
+                        sequence.append(", ");
+        }
+
+        index = 0;
+        std::string pk_sequence;
+        for (const auto &param: pk_vec) {
+                pk_sequence.append(param);
+                if ((++index) < pk_vec.size())
+                        pk_sequence.append(", ");
+        }
+
+        std::cout << "\t" << table << " tmp;" << std::endl;
+        std::cout << "\tif (!get_one_" << table << "(db, &tmp, " << pk_sequence << "))" << std::endl;
+        std::cout << "\t\treturn " << table << "_insert(db, " << sequence << ");" << std::endl;
+        std::cout << "\treturn " << table << "_update(db, " << sequence << ");" << std::endl;
         std::cout << "}\n\n";
 }
 
@@ -219,6 +330,7 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
 
         int nFields = PQntuples(res);
 
+        // Whatever the fuck that does ...
         const std::string pkQuery = "SELECT kcu.column_name "
                                     "FROM information_schema.table_constraints tc "
                                     "JOIN information_schema.key_column_usage kcu "
@@ -265,6 +377,9 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
         // Emit insert
         emit_insert(table, fields, type_mappings);
 
+        // Update function
+        emit_update(table, fields, type_mappings);
+
         // Emit basic select functions
         if (primary_keys.empty())
                 std::cout << "//\n// The table '" << table <<
@@ -272,6 +387,9 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
                         << std::endl;
         else
                 emit_select(table, fields, type_mappings);
+
+        // Save function
+        emit_save(table, fields, type_mappings);
 
         // Emit the utility spread macros
         emit_spread_macro(table, fields, type_mappings);
@@ -418,7 +536,7 @@ void gen_preamble()
                 "#include <libpq-fe.h>\n"
                 "#include <Database.hpp>\n\n"
                 "#define NO_CAST(x) (x)\n\n"
-                "bool finalize_insert_op(PGresult *res) {\n"
+                "bool finalize_op(PGresult *res) {\n"
                 "        if (!res)\n"
                 "                return false;\n"
                 "        PQclear(res);\n"
