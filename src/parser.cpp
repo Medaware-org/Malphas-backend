@@ -29,13 +29,18 @@ int parse_identifier(char **buff, std::string &dst)
 
 #undef IS_IDEN
 
-int parse_value(char **buff, std::string &dst)
+int parse_until(char **buff, std::string &dst, char delim)
 {
         int nLen = 0;
-        while (**buff != '\n' && **buff != '\0') {
+        while (**buff != '\n' && **buff != '\0' && **buff != delim) {
                 dst.push_back(**buff);
                 (*buff)++;
                 nLen++;
         }
         return nLen;
+}
+
+int parse_value(char **buff, std::string &dst)
+{
+        return parse_until(buff, dst, 0);
 }

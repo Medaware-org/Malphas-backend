@@ -92,7 +92,7 @@ bool parse_dao_config(DaoConfig *dst)
 
 bool parse_db_config(DbConfig *dst)
 {
-        Config cfg = Config("config/malphas.cfg");
+        Config cfg = Config("config/db.cfg");
 
         if (!cfg.parse())
                 return false;
@@ -114,6 +114,29 @@ bool parse_db_config(DbConfig *dst)
         });
 
 #undef ASSIGN
+
+        if (!cfg.validate())
+                return false;
+
+        return true;
+}
+
+bool parse_malphas_config(MalphasConfig *dst)
+{
+        Config cfg = Config("config/malphas.cfg");
+
+        if (!cfg.parse())
+                return false;
+
+        cfg.add_required("server.port", [&](const std::string &prop) {
+                try {
+                        size_t pos;
+                        dst->port = std::stoi(prop, &pos);
+                        return pos == prop.size();
+                } catch (...) {
+                        return false;
+                }
+        });
 
         if (!cfg.validate())
                 return false;
@@ -188,8 +211,8 @@ bool Config::parse()
                 if (c == '[') {
                         buffer++;
                         section.clear();
-                        if (parse_identifier(&buffer, section) <= 0) {
-                                CROW_LOG_CRITICAL << "Could not parse config section identifier starting with '"
+                        if (parse_until(&buffer, section, ']') <= 0) {
+                                CROW_LOG_CRITICAL << "Could not parse config section name starting with '"
                                                   << (*buffer) << "'";
                                 return false;
                         }

@@ -18,6 +18,8 @@ int skip_spaces(char **buff);
  */
 int parse_identifier(char **buff, std::string &dst);
 
+int parse_until(char **buff, std::string &dst, char delim);
+
 /**
  * Config parser utility. Increments <code>*buff</code> until the current character is a <code>\\n</code> or <code>\\0</code>.
  * Each character is appended to <code>dst</code>.

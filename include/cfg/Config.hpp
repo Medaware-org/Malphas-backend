@@ -58,6 +58,14 @@ struct DbConfig {
 
 [[nodiscard]] bool parse_db_config(DbConfig *dst);
 
+struct MalphasConfig {
+        int port;
+
+        MalphasConfig() : port(0) {}
+};
+
+[[nodiscard]] bool parse_malphas_config(MalphasConfig *dst);
+
 /**
  * Config file parser and validator.
  */

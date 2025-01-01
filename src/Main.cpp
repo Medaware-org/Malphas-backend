@@ -18,6 +18,11 @@ int main()
 {
         std::cout << banner << std::endl;
 
+        MalphasConfig malphasCfg;
+
+        if (!parse_malphas_config(&malphasCfg))
+                return 1;
+
         DbConfig cfg;
 
         if (!parse_db_config(&cfg))
@@ -48,6 +53,6 @@ int main()
                 return "Hello world";
         });
 
-        app.port(1234).run();
+        app.port(malphasCfg.port).run();
         return 0;
 }
