@@ -19,7 +19,7 @@ add_custom_command(TARGET gen_dao POST_BUILD
         COMMENT "Create the DAO directory and invoke the DAO generator")
 
 # --- Malphas Backend ---
-add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp src/middleware/AuthFilter.cpp)
+add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp src/middleware/AuthFilter.cpp src/Api.cpp)
 
 # Make the crow library directly #include-able
 target_include_directories(malphas PRIVATE vendor/crow)

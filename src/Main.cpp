@@ -1,6 +1,6 @@
 #include <cfg/Config.hpp>
 #include <Database.hpp>
-#define CROW_ENABLE_SSL
+#include <Api.hpp>
 #include <crow_all.h>
 #include <iostream>
 #include <middleware/AuthFilter.hpp>
@@ -45,13 +45,8 @@ int main()
 
         app.loglevel(crow::LogLevel::Info);
 
-        CROW_ROUTE(app, "/")([]() {
-                return "Hello world";
-        });
-
-        CROW_ROUTE(app, "/secured")([]() {
-                return "Hello world";
-        });
+        const MalphasApi api(db);
+        api.register_endpoints(app);
 
         app.port(malphasCfg.port).run();
         return 0;

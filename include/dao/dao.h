@@ -11,15 +11,14 @@
 
 #define NO_CAST(x) (x)
 
-bool finalize_op(PGresult *res)
-{
+inline bool finalize_op(PGresult *res) {
         if (!res)
                 return false;
         PQclear(res);
         return true;
 }
 
-PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)
+inline PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)
 {
         ExecStatusType status;
         PGresult *res = db.query(query, &status);
@@ -31,125 +30,117 @@ PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_statu
 }
 
 template<typename T>
-void dao_map_all(PGresult *res, std::vector<T> &dst, std::function<T(PGresult *res, int tuple)> mapper)
+inline void dao_map_all(PGresult *res, std::vector<T> &dst, std::function<T(PGresult *res, int tuple)> mapper)
 {
-        for (int i = 0; i < PQntuples(res); i++)
-                dst.push_back(mapper(res, i));
+       for (int i = 0; i < PQntuples(res); i++)
+               dst.push_back(mapper(res, i));
 }
 
 struct user {
-        std::string id;
-        std::string nickname;
-        std::string passwd_hash;
+	std::string id;
+	std::string nickname;
+	std::string passwd_hash;
 };
 
-static user dao_map_user(PGresult *result, int tuple)
-{
-        return user{
-                .id = NO_CAST(PQgetvalue(result, tuple,0)),
-                .nickname = NO_CAST(PQgetvalue(result, tuple,1)),
-                .passwd_hash = NO_CAST(PQgetvalue(result, tuple,2)),
-        };
+inline user dao_map_user(PGresult *result, int tuple) {
+	return user {
+		.id = NO_CAST(PQgetvalue(result, tuple,0)),
+		.nickname = NO_CAST(PQgetvalue(result, tuple,1)),
+		.passwd_hash = NO_CAST(PQgetvalue(result, tuple,2)),
+	};
 }
 
-bool user_insert(Database &db, std::string /*PK*/ id, std::string nickname, std::string passwd_hash)
-{
-        std::string query = "INSERT INTO \"user\" (id, nickname, passwd_hash) VALUES ('" + id + "', '" + nickname +
-                            "', '" + passwd_hash + "')";
-        return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+inline bool user_insert(Database &db, std::string /*PK*/ id, std::string nickname, std::string passwd_hash) {
+	std::string query = "INSERT INTO \"user\" (id, nickname, passwd_hash) VALUES ('" + id + "', '" + nickname + "', '" + passwd_hash + "')";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-bool user_update(Database &db, std::string /*PK*/ id, std::string nickname, std::string passwd_hash)
+inline bool user_update(Database &db, std::string /*PK*/ id, std::string nickname, std::string passwd_hash)
 {
-        std::string query = "UPDATE \"user\" SET nickname = '" + nickname + "', passwd_hash = '" + passwd_hash +
-                            "' WHERE id = '" + id + "';";
-        return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+	std::string query = "UPDATE \"user\" SET nickname = '" + nickname + "', passwd_hash = '" + passwd_hash + "' WHERE id = '" + id + "';";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-bool get_one_user(Database &db, user *dst, std::string id)
+inline bool get_one_user(Database &db, user *dst, std::string id)
 {
-        std::string query = "SELECT * FROM \"user\" WHERE id = '" + id + "'";
-        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-        if (!res) return false;
-        *dst = dao_map_user(res, 0);
-        PQclear(res);
-        return true;
+	std::string query = "SELECT * FROM \"user\" WHERE id = '" + id+ "'";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return true;
 }
 
-bool get_all_user(Database &db, std::vector<user> &dst)
+inline bool get_all_user(Database &db, std::vector<user> &dst)
 {
-        std::string query = "SELECT * from \"user\"";
-        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-        if (!res) return false;
-        dao_map_all<user>(res, dst, [](auto *res, auto tuple) { return dao_map_user(res, tuple); });
-        PQclear(res);
-        return true;
+	std::string query = "SELECT * from \"user\"";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<user>(res, dst, [](auto *res, auto tuple) { return dao_map_user(res, tuple); });
+	PQclear(res);
+	return true;
 }
 
-bool user_save(Database &db, std::string /*PK*/ id, std::string nickname, std::string passwd_hash)
+inline bool user_save(Database &db, std::string /*PK*/ id, std::string nickname, std::string passwd_hash)
 {
-        user tmp;
-        if (!get_one_user(db, &tmp, id))
-                return user_insert(db, id, nickname, passwd_hash);
-        return user_update(db, id, nickname, passwd_hash);
+	user tmp;
+	if (!get_one_user(db, &tmp, id))
+		return user_insert(db, id, nickname, passwd_hash);
+	return user_update(db, id, nickname, passwd_hash);
 }
 
 #define SPREAD_USER(user_struct) user_struct.id, user_struct.nickname, user_struct.passwd_hash
 #define SPREAD_USER_PTR(user_struct) user_struct->id, user_struct->nickname, user_struct->passwd_hash
 
 struct session {
-        std::string session_token;
-        std::string user_id;
+	std::string session_token;
+	std::string user_id;
 };
 
-static session dao_map_session(PGresult *result, int tuple)
-{
-        return session{
-                .session_token = NO_CAST(PQgetvalue(result, tuple,0)),
-                .user_id = NO_CAST(PQgetvalue(result, tuple,1)),
-        };
+inline session dao_map_session(PGresult *result, int tuple) {
+	return session {
+		.session_token = NO_CAST(PQgetvalue(result, tuple,0)),
+		.user_id = NO_CAST(PQgetvalue(result, tuple,1)),
+	};
 }
 
-bool session_insert(Database &db, std::string /*PK*/ session_token, std::string user_id)
-{
-        std::string query = "INSERT INTO \"session\" (session_token, user_id) VALUES ('" + session_token + "', '" +
-                            user_id + "')";
-        return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+inline bool session_insert(Database &db, std::string /*PK*/ session_token, std::string user_id) {
+	std::string query = "INSERT INTO \"session\" (session_token, user_id) VALUES ('" + session_token + "', '" + user_id + "')";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-bool session_update(Database &db, std::string /*PK*/ session_token, std::string user_id)
+inline bool session_update(Database &db, std::string /*PK*/ session_token, std::string user_id)
 {
-        std::string query = "UPDATE \"session\" SET user_id = '" + user_id + "' WHERE session_token = '" + session_token
-                            + "';";
-        return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+	std::string query = "UPDATE \"session\" SET user_id = '" + user_id + "' WHERE session_token = '" + session_token + "';";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-bool get_one_session(Database &db, session *dst, std::string session_token)
+inline bool get_one_session(Database &db, session *dst, std::string session_token)
 {
-        std::string query = "SELECT * FROM \"session\" WHERE session_token = '" + session_token + "'";
-        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-        if (!res) return false;
-        *dst = dao_map_session(res, 0);
-        PQclear(res);
-        return true;
+	std::string query = "SELECT * FROM \"session\" WHERE session_token = '" + session_token+ "'";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	*dst = dao_map_session(res, 0);
+	PQclear(res);
+	return true;
 }
 
-bool get_all_session(Database &db, std::vector<session> &dst)
+inline bool get_all_session(Database &db, std::vector<session> &dst)
 {
-        std::string query = "SELECT * from \"session\"";
-        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-        if (!res) return false;
-        dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
-        PQclear(res);
-        return true;
+	std::string query = "SELECT * from \"session\"";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
+	PQclear(res);
+	return true;
 }
 
-bool session_save(Database &db, std::string /*PK*/ session_token, std::string user_id)
+inline bool session_save(Database &db, std::string /*PK*/ session_token, std::string user_id)
 {
-        session tmp;
-        if (!get_one_session(db, &tmp, session_token))
-                return session_insert(db, session_token, user_id);
-        return session_update(db, session_token, user_id);
+	session tmp;
+	if (!get_one_session(db, &tmp, session_token))
+		return session_insert(db, session_token, user_id);
+	return session_update(db, session_token, user_id);
 }
 
 #define SPREAD_SESSION(session_struct) session_struct.session_token, session_struct.user_id
@@ -159,18 +150,41 @@ bool session_save(Database &db, std::string /*PK*/ session_token, std::string us
 // Custom Functions
 //
 
-bool get_session_user(Database &db, user *dst, std::string user_id)
+inline bool get_user_by_username(Database &db, user *dst, std::string username)
 {
-        std::string query =
-                "SELECT * FROM \"user\" u inner join session s on s.user_id = u.id where s.session_token = \"" + user_id
-                + "\";";
-        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-        if (!res) return false;
-        if (PQntuples(res) != 1) {
-                PQclear(res);
-                return false;
-        }
-        *dst = dao_map_user(res, 0);
-        PQclear(res);
-        return 0;
+	std::string query = "SELECT * FROM \"user\" u WHERE u.username = \"" + username + "\";";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return 0;
 }
+
+inline bool get_sessions_of_user(Database &db, std::vector<session> &dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM session s WHERE s.user_id = \"" + user_id + "\";";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
+	PQclear(res);
+	return 0;
+}
+
+inline bool get_session_user(Database &db, user *dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = \"" + user_id + "\";";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return 0;
+}
+

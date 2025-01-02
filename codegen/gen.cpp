@@ -101,7 +101,7 @@ void emit_insert(const std::string &table, const std::map<std::string, table_fie
 {
         size_t nTuples = layout.size();
 
-        std::cout << "bool " << table << "_insert(Database &db, ";
+        std::cout << "inline bool " << table << "_insert(Database &db, ";
         int index = 0;
         for (const auto &[column, field]: layout) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
@@ -156,7 +156,7 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
                              return pair.second.is_primary;
                      });
 
-        std::cout << "bool " << table << "_update(Database &db, ";
+        std::cout << "inline bool " << table << "_update(Database &db, ";
         int index = 0;
         for (const auto &[column, field]: layout) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
@@ -208,7 +208,7 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
 void emit_save(const std::string &table, const std::map<std::string, table_field> &layout,
                const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::cout << "bool " << table << "_save(Database &db, ";
+        std::cout << "inline bool " << table << "_save(Database &db, ";
 
         std::vector<std::string> pk_vec;
         std::vector<std::string> param_vec;
@@ -279,7 +279,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
                 "\tif (!res) return false;";
 
         // Single result function
-        std::cout << "bool get_one_" << table << "(Database &db, " << table << " *dst, " << part_signature;
+        std::cout << "inline bool get_one_" << table << "(Database &db, " << table << " *dst, " << part_signature;
         std::cout << query_str;
         std::cout << exec_invoke << std::endl;
         std::cout << "\t*dst = dao_map_" << table << "(res, 0);" << std::endl;
@@ -288,7 +288,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         std::cout << "}\n\n";
 
         // Get all function
-        std::cout << "bool get_all_" << table << "(Database &db, std::vector<" << table << "> &dst)\n{\n";
+        std::cout << "inline bool get_all_" << table << "(Database &db, std::vector<" << table << "> &dst)\n{\n";
         std::cout << "\tstd::string query = \"SELECT * from \\\"" << table << "\\\"\";" << std::endl;
         std::cout << exec_invoke << std::endl;
         std::cout << "\tdao_map_all<" << table << ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << table <<
@@ -304,7 +304,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
 void emit_dao_mapper(const std::string &table, const std::map<std::string, table_field> &layout,
                      const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::cout << "static " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" << std::endl
+        std::cout << "inline " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" << std::endl
                 << "\treturn " << table << " {\n";
 
         int index = 0;
@@ -428,7 +428,7 @@ int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
                                           ? (function.type_mapping + " *")
                                           : ("std::vector<" + function.type_mapping + "> &");
 
-        std::cout << "bool " << function.identifier << "(Database &db, " << return_type << "dst";
+        std::cout << "inline bool " << function.identifier << "(Database &db, " << return_type << "dst";
 
         int n;
 
@@ -508,7 +508,7 @@ body:
 
         std::cout << "\tPQclear(res);" << std::endl;
         std::cout << "\treturn 0;" << std::endl;
-        std::cout << "}" << std::endl;
+        std::cout << "}\n\n";
         return 0;
 }
 
@@ -536,13 +536,13 @@ void gen_preamble()
                 "#include <libpq-fe.h>\n"
                 "#include <Database.hpp>\n\n"
                 "#define NO_CAST(x) (x)\n\n"
-                "bool finalize_op(PGresult *res) {\n"
+                "inline bool finalize_op(PGresult *res) {\n"
                 "        if (!res)\n"
                 "                return false;\n"
                 "        PQclear(res);\n"
                 "        return true;\n"
                 "}\n\n"
-                "PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
+                "inline PGresult *dao_query(Database &db, std::string query, ExecStatusType assert_status)\n"
                 "{\n"
                 "        ExecStatusType status;\n"
                 "        PGresult *res = db.query(query, &status);\n"
@@ -553,7 +553,7 @@ void gen_preamble()
                 "        return res;\n"
                 "}\n\n"
                 "template<typename T>\n"
-                "void dao_map_all(PGresult *res, std::vector<T> &dst, std::function<T(PGresult *res, int tuple)> mapper)\n"
+                "inline void dao_map_all(PGresult *res, std::vector<T> &dst, std::function<T(PGresult *res, int tuple)> mapper)\n"
                 "{\n"
                 "       for (int i = 0; i < PQntuples(res); i++)\n"
                 "               dst.push_back(mapper(res, i));\n"

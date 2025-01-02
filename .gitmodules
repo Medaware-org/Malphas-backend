@@ -1,0 +1,6 @@
+[submodule "libbcrypt"]
+	path = libbcrypt
+	url = git@github.com:trusch/libbcrypt.git
+[submodule "vendor/libbcrypt"]
+	path = vendor/libbcrypt
+	url = git@github.com:trusch/libbcrypt.git
