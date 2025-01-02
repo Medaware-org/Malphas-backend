@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 2.29)
 project(malphas-backend)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -24,6 +23,16 @@ add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util
 
 # --- For Crow SSL support ---
 find_package(OpenSSL REQUIRED)
+
+# --- The boost library, used for generating UUIDs ---
+cmake_policy(SET CMP0167 OLD)
+find_package(Boost REQUIRED)
+
+if (NOT Boost_FOUND)
+    message(FATAL_ERROR "Could not find the Boost library")
+endif ()
+
+target_include_directories(malphas PRIVATE ${Boost_INCLUDE_DIRS})
 
 # Make the crow library directly #include-able
 target_include_directories(malphas PRIVATE vendor/crow vendor/Bcrypt.cpp/include)
@@ -51,7 +60,7 @@ if (UNIX)
     endif ()
 endif ()
 
-target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto ${Boost_LIBRARIES})
 target_link_libraries(gen_dao PRIVATE ${PostgreSQL_LIBRARIES})
 
 add_dependencies(malphas gen_dao)

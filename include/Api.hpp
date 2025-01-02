@@ -11,6 +11,8 @@
 
 #define REQUIRE(body, id, path) if (!body.has(path)) { RETURN_ERR } auto id = body[path]
 
+#define SESSION_TOKEN_LENGTH 128
+
 class MalphasApi {
         Database &db;
 
@@ -21,5 +23,12 @@ class MalphasApi {
                 void register_endpoints(crow::App<T...> &crow) const;
 
         private:
+                [[nodiscard]] std::string generate_token() const;
+
+                [[nodiscard]] crow::json::wvalue error_dto(std::string brief, std::string detail) const;
+
+        private:
                 [[nodiscard]] crow::response login(const crow::json::rvalue &body) const;
+
+                [[nodiscard]] crow::response user_register(const crow::json::rvalue &body) const;
 };

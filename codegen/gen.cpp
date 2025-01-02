@@ -282,6 +282,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         std::cout << "inline bool get_one_" << table << "(Database &db, " << table << " *dst, " << part_signature;
         std::cout << query_str;
         std::cout << exec_invoke << std::endl;
+        std::cout << "\tif (PQntuples(res) != 1) {\n\t\tPQclear(res);\n\t\treturn false;\n\t}" << std::endl;
         std::cout << "\t*dst = dao_map_" << table << "(res, 0);" << std::endl;
         std::cout << "\tPQclear(res);" << std::endl;
         std::cout << "\treturn true;" << std::endl;
@@ -482,7 +483,7 @@ body:
                 bool quotes = needs_quotes(param->second);
 
                 if (quotes)
-                        query.append("\\\"");
+                        query.append("'");
 
                 query.append("\" + " + param->first);
 
@@ -490,7 +491,7 @@ body:
                         query.append(" + \"");
 
                 if (quotes)
-                        query.append("\\\"");
+                        query.append("'");
         }
 
         std::cout << "\tstd::string query = " << query << ";" << std::endl;
@@ -507,7 +508,7 @@ body:
         }
 
         std::cout << "\tPQclear(res);" << std::endl;
-        std::cout << "\treturn 0;" << std::endl;
+        std::cout << "\treturn true;" << std::endl;
         std::cout << "}\n\n";
         return 0;
 }

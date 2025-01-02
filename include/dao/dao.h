@@ -66,6 +66,10 @@ inline bool get_one_user(Database &db, user *dst, std::string id)
 	std::string query = "SELECT * FROM \"user\" WHERE id = '" + id+ "'";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
 	*dst = dao_map_user(res, 0);
 	PQclear(res);
 	return true;
@@ -120,6 +124,10 @@ inline bool get_one_session(Database &db, session *dst, std::string session_toke
 	std::string query = "SELECT * FROM \"session\" WHERE session_token = '" + session_token+ "'";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
 	*dst = dao_map_session(res, 0);
 	PQclear(res);
 	return true;
@@ -152,7 +160,7 @@ inline bool session_save(Database &db, std::string /*PK*/ session_token, std::st
 
 inline bool get_user_by_username(Database &db, user *dst, std::string username)
 {
-	std::string query = "SELECT * FROM \"user\" u WHERE u.username = \"" + username + "\";";
+	std::string query = "SELECT * FROM \"user\" u WHERE u.nickname = '" + username + "';";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	if (PQntuples(res) != 1) {
@@ -161,22 +169,22 @@ inline bool get_user_by_username(Database &db, user *dst, std::string username)
 	}
 	*dst = dao_map_user(res, 0);
 	PQclear(res);
-	return 0;
+	return true;
 }
 
 inline bool get_sessions_of_user(Database &db, std::vector<session> &dst, std::string user_id)
 {
-	std::string query = "SELECT * FROM session s WHERE s.user_id = \"" + user_id + "\";";
+	std::string query = "SELECT * FROM session s WHERE s.user_id = '" + user_id + "';";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
 	PQclear(res);
-	return 0;
+	return true;
 }
 
 inline bool get_session_user(Database &db, user *dst, std::string user_id)
 {
-	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = \"" + user_id + "\";";
+	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = '" + user_id + "';";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	if (PQntuples(res) != 1) {
@@ -185,6 +193,6 @@ inline bool get_session_user(Database &db, user *dst, std::string user_id)
 	}
 	*dst = dao_map_user(res, 0);
 	PQclear(res);
-	return 0;
+	return true;
 }
 
