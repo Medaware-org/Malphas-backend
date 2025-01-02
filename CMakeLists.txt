@@ -10,6 +10,9 @@ set(CMAKE_BUILD_TYPE Debug)
 # This keeps Clangd from getting confused over imports when developing in Vim
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
+# -- Build libbcrypt from source --
+add_subdirectory(vendor/libbcrypt)
+
 # --- DAO Code Generator ---
 add_executable(gen_dao codegen/gen.cpp src/cfg/Config.cpp src/parser.cpp src/util.cpp)
 
@@ -47,7 +50,7 @@ if (UNIX)
     endif ()
 endif ()
 
-target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES})
+target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES} libbcrypt)
 target_link_libraries(gen_dao PRIVATE ${PostgreSQL_LIBRARIES})
 
 add_dependencies(malphas gen_dao)
