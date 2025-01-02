@@ -1,3 +1,4 @@
+#define CROW_ENABLE_SSL
 #include <cfg/Config.hpp>
 #include <Database.hpp>
 #include <Api.hpp>

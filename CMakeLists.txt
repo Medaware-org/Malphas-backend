@@ -22,6 +22,9 @@ add_custom_command(TARGET gen_dao POST_BUILD
 add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp
         src/middleware/AuthFilter.cpp src/Api.cpp vendor/Bcrypt.cpp/src/bcrypt.cpp vendor/Bcrypt.cpp/src/blowfish.cpp)
 
+# --- For Crow SSL support ---
+find_package(OpenSSL REQUIRED)
+
 # Make the crow library directly #include-able
 target_include_directories(malphas PRIVATE vendor/crow vendor/Bcrypt.cpp/include)
 target_include_directories(gen_dao PRIVATE vendor/crow)
@@ -48,7 +51,7 @@ if (UNIX)
     endif ()
 endif ()
 
-target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES})
+target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(gen_dao PRIVATE ${PostgreSQL_LIBRARIES})
 
 add_dependencies(malphas gen_dao)
