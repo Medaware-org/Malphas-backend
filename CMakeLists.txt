@@ -10,9 +10,6 @@ set(CMAKE_BUILD_TYPE Debug)
 # This keeps Clangd from getting confused over imports when developing in Vim
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-# -- Build libbcrypt from source --
-add_subdirectory(vendor/libbcrypt)
-
 # --- DAO Code Generator ---
 add_executable(gen_dao codegen/gen.cpp src/cfg/Config.cpp src/parser.cpp src/util.cpp)
 
@@ -22,10 +19,11 @@ add_custom_command(TARGET gen_dao POST_BUILD
         COMMENT "Create the DAO directory and invoke the DAO generator")
 
 # --- Malphas Backend ---
-add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp src/middleware/AuthFilter.cpp src/Api.cpp)
+add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp
+        src/middleware/AuthFilter.cpp src/Api.cpp vendor/Bcrypt.cpp/src/bcrypt.cpp vendor/Bcrypt.cpp/src/blowfish.cpp)
 
 # Make the crow library directly #include-able
-target_include_directories(malphas PRIVATE vendor/crow)
+target_include_directories(malphas PRIVATE vendor/crow vendor/Bcrypt.cpp/include)
 target_include_directories(gen_dao PRIVATE vendor/crow)
 
 # .. do the same for the headers in `include/`
@@ -50,7 +48,7 @@ if (UNIX)
     endif ()
 endif ()
 
-target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES} libbcrypt)
+target_link_libraries(malphas PRIVATE ${PostgreSQL_LIBRARIES})
 target_link_libraries(gen_dao PRIVATE ${PostgreSQL_LIBRARIES})
 
 add_dependencies(malphas gen_dao)
