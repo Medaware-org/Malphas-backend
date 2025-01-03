@@ -45,6 +45,7 @@ int main()
          * but CORS errors sure are annoying A.F.
          **/
         crow::App<crow::CORSHandler, AuthFilter> app(
+                crow::CORSHandler(),
                 AuthFilter({"^/", "^/login", "^/register"}, db)
         );
 

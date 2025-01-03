@@ -56,16 +56,18 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
 
         user usr;
 
+        auto errorDto = error_dto("Invalid Credentials", "The credentials don't match any existing user");
+
         // User does not exist
         if (!get_user_by_username(db, &usr, username.s())) {
                 CROW_LOG_DEBUG << "Login: User '" << username.s() << "' does not exist.";
-                return {401, "Unauthorized"};
+                return {401, errorDto};
         }
 
         // Passwords don't match
         if (!bcrypt::validatePassword(password.s(), usr.passwd_hash)) {
                 CROW_LOG_DEBUG << "Login: Password for user '" << username.s() << "' is incorrect.";
-                return {401, "Unauthorized"};
+                return {401, errorDto};
         }
 
         std::string token = generate_token();
@@ -73,7 +75,7 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
         // This should not happen
         if (!session_save(db, token, usr.id)) {
                 CROW_LOG_CRITICAL << "Could not create session for user '" << username.s() << "' !";
-                return {500, "Session creation failed"};
+                return {500, error_dto("Internal Error", "Could not create session")};
         }
 
         CROW_LOG_DEBUG << "Session granted for user '" << username.s() << "'";
@@ -113,7 +115,7 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
         // This should not happen
         if (!user_save(db, SPREAD_USER(usr))) {
                 CROW_LOG_CRITICAL << "Could not store user '" << username.s() << "' !";
-                return {500, "User creation failed"};
+                return {500, error_dto("Internal error", "Could not create user")};
         }
 
         CROW_LOG_DEBUG << "User registered: '" << username.s() << "'";
