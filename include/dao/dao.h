@@ -154,6 +154,68 @@ inline bool session_save(Database &db, std::string /*PK*/ session_token, std::st
 #define SPREAD_SESSION(session_struct) session_struct.session_token, session_struct.user_id
 #define SPREAD_SESSION_PTR(session_struct) session_struct->session_token, session_struct->user_id
 
+struct scene {
+	std::string author;
+	std::string description;
+	std::string id;
+	std::string scene_name;
+};
+
+inline scene dao_map_scene(PGresult *result, int tuple) {
+	return scene {
+		.author = NO_CAST(PQgetvalue(result, tuple,0)),
+		.description = NO_CAST(PQgetvalue(result, tuple,1)),
+		.id = NO_CAST(PQgetvalue(result, tuple,2)),
+		.scene_name = NO_CAST(PQgetvalue(result, tuple,3)),
+	};
+}
+
+inline bool scene_insert(Database &db, std::string author, std::string description, std::string /*PK*/ id, std::string scene_name) {
+	std::string query = "INSERT INTO \"scene\" (author, description, id, scene_name) VALUES ('" + author + "', '" + description + "', '" + id + "', '" + scene_name + "')";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+}
+
+inline bool scene_update(Database &db, std::string author, std::string description, std::string /*PK*/ id, std::string scene_name)
+{
+	std::string query = "UPDATE \"scene\" SET author = '" + author + "', description = '" + description + "', scene_name = '" + scene_name + "' WHERE id = '" + id + "';";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+}
+
+inline bool get_one_scene(Database &db, scene *dst, std::string id)
+{
+	std::string query = "SELECT * FROM \"scene\" WHERE id = '" + id+ "'";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_scene(res, 0);
+	PQclear(res);
+	return true;
+}
+
+inline bool get_all_scene(Database &db, std::vector<scene> &dst)
+{
+	std::string query = "SELECT * from \"scene\"";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<scene>(res, dst, [](auto *res, auto tuple) { return dao_map_scene(res, tuple); });
+	PQclear(res);
+	return true;
+}
+
+inline bool scene_save(Database &db, std::string author, std::string description, std::string /*PK*/ id, std::string scene_name)
+{
+	scene tmp;
+	if (!get_one_scene(db, &tmp, id))
+		return scene_insert(db, author, description, id, scene_name);
+	return scene_update(db, author, description, id, scene_name);
+}
+
+#define SPREAD_SCENE(scene_struct) scene_struct.author, scene_struct.description, scene_struct.id, scene_struct.scene_name
+#define SPREAD_SCENE_PTR(scene_struct) scene_struct->author, scene_struct->description, scene_struct->id, scene_struct->scene_name
+
 //
 // Custom Functions
 //
@@ -168,6 +230,16 @@ inline bool get_user_by_username(Database &db, user *dst, std::string username)
 		return false;
 	}
 	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return true;
+}
+
+inline bool get_scenes_of_user(Database &db, std::vector<scene> &dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM scene s WHERE s.author = '" + user_id + "';";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<scene>(res, dst, [](auto *res, auto tuple) { return dao_map_scene(res, tuple); });
 	PQclear(res);
 	return true;
 }
