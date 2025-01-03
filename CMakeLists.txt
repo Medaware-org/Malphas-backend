@@ -19,7 +19,8 @@ add_custom_command(TARGET gen_dao POST_BUILD
 
 # --- Malphas Backend ---
 add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp
-        src/middleware/AuthFilter.cpp src/Api.cpp vendor/Bcrypt.cpp/src/bcrypt.cpp vendor/Bcrypt.cpp/src/blowfish.cpp)
+        src/middleware/AuthFilter.cpp src/Api.cpp vendor/Bcrypt.cpp/src/bcrypt.cpp
+        vendor/Bcrypt.cpp/src/blowfish.cpp)
 
 # --- For Crow SSL support ---
 find_package(OpenSSL REQUIRED)

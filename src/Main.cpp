@@ -40,7 +40,11 @@ int main()
         if (!db.run_migrations())
                 return 1;
 
-        crow::App<AuthFilter> app(
+        /**
+         * Using a dummy CORS handler here; we don't *really* care about security,
+         * but CORS errors sure are annoying A.F.
+         **/
+        crow::App<crow::CORSHandler, AuthFilter> app(
                 AuthFilter({"^/", "^/login", "^/register"}, db)
         );
 

@@ -29,7 +29,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                 });
 }
 
-template void MalphasApi::register_endpoints<>(crow::App<AuthFilter> &) const;
+template void MalphasApi::register_endpoints<>(crow::App<crow::CORSHandler, AuthFilter> &) const;
 
 std::string MalphasApi::generate_token() const
 {
