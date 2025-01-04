@@ -42,6 +42,9 @@
     <ClInclude Include="vendor\Bcrypt.cpp\src\openbsd.h" />
     <ClInclude Include="vendor\crow\crow_all.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="migrations\3__Create_wires_and_circuit_tables.sql" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
