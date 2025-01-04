@@ -155,12 +155,6 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
         return {200, "OK"};
 }
 
-crow::response MalphasApi::user_get_scenes(const crow::request &req) const
-{
-        // req.middleware_context()
-        return {200, "OK"};
-}
-
 crow::response MalphasApi::post_scene(const crow::json::rvalue& body) const
 {
     REQUIRE(body, author     , "author");
