@@ -33,6 +33,4 @@ class MalphasApi {
                 [[nodiscard]] crow::response user_register(const crow::json::rvalue &body) const;
 
                 [[nodiscard]] crow::response user_get_scenes(const crow::request &req) const;
-
-                crow::response do_stuff() const;
 };

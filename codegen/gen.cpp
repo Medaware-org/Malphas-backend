@@ -23,11 +23,35 @@ struct table_field {
         std::string name;
         std::string type;
         bool is_primary;
+        bool is_nullable;
 };
 
 bool needs_quotes(const std::string &type)
 {
         return type == "text" || type.find("varchar") != std::string::npos || type == "uuid" || type == "std::string";
+}
+
+std::string prep_value(const table_field &field, std::string param, bool last)
+{
+        std::string str;
+
+        str.append("\" + ");
+
+        std::string leftQuotes = (needs_quotes(field.type) ? "std::string(\"'\") + " : "");
+        std::string rightQuotes = (needs_quotes(field.type) ? " + std::string(\"'\")" : "");
+
+        if (field.is_nullable)
+                str.append("(" + param + " ? (" + leftQuotes + "xto_string(*" + param + ")" + rightQuotes +
+                           ") : \"null\")");
+        else
+                str.append(leftQuotes + "xto_string(" + param + ")" + rightQuotes);
+
+        if (last && !needs_quotes(field.type))
+                return str;
+
+        str.append(" + \"");
+
+        return str;
 }
 
 PGconn *connect_db(std::string user, std::string password, std::string db, std::string host, int port)
@@ -49,12 +73,24 @@ PGconn *connect_db(std::string user, std::string password, std::string db, std::
 /*
  * This function maps the type from PostgreSQL relations to C++ types
  */
-type_mapping map_types(const std::string &org, const std::map<std::string, type_mapping> &type_mappings)
+std::pair<type_mapping, std::string> map_types(const table_field &field,
+                                               const std::map<std::string, type_mapping> &type_mappings)
 {
-        auto iter = type_mappings.find(org);
+        type_mapping mapping;
+
+        auto iter = type_mappings.find(field.type);
         if (iter == type_mappings.end())
-                return type_mapping{.cpp = "std::any", .function = "std::any"};
-        return iter->second;
+                mapping = type_mapping{.cpp = "std::any", .function = "std::any"};
+        else mapping = iter->second;
+
+        std::string type_str;
+
+        if (field.is_nullable)
+                type_str = std::format("std::optional<{}>", mapping.cpp);
+        else
+                type_str = mapping.cpp;
+
+        return std::make_pair(mapping, type_str);
 }
 
 void emit_struct(const std::string &table, const ordered_map<std::string, table_field> &layout,
@@ -62,7 +98,13 @@ void emit_struct(const std::string &table, const ordered_map<std::string, table_
 {
         std::cout << "struct " << table << " {" << std::endl;
         layout.for_each([&](const auto &column, const auto &field) {
-                std::cout << "\t" << map_types(field.type, type_mappings).cpp << " " << column << ";" << std::endl;
+                std::cout << "\t";
+                if (field.is_nullable)
+                        std::cout << "std::optional<";
+                std::cout << map_types(field, type_mappings).second;
+                if (field.is_nullable)
+                        std::cout << ">";
+                std::cout << " " << column << ";" << std::endl;
         });
         std::cout << "};\n\n";
 }
@@ -107,7 +149,7 @@ void emit_insert(const std::string &table, const ordered_map<std::string, table_
         std::cout << "[[nodiscard]] inline bool " << table << "_insert(Database &db, ";
         int index = 0;
         layout.for_each([&](const auto &column, const auto &field) {
-                std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
+                std::cout << map_types(field, type_mappings).second << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
                 std::cout << (((++index) < layout.size()) ? ", " : ") {\n");
         });
@@ -123,13 +165,7 @@ void emit_insert(const std::string &table, const ordered_map<std::string, table_
         layout.for_each([&](const auto &column, const auto &field) {
                 bool quotes = needs_quotes(field.type);
 
-                if (quotes)
-                        std::cout << "'";
-
-                std::cout << "\" + xto_string(" << column << ") + \"";
-
-                if (quotes)
-                        std::cout << "'";
+                std::cout << prep_value(field, column, (index + 1) >= nTuples);
 
                 std::cout << (((++index) < nTuples) ? ", " : ")\";\n");
         });
@@ -159,7 +195,7 @@ void emit_update(const std::string &table, const ordered_map<std::string, table_
         std::cout << "[[nodiscard]] inline bool " << table << "_update(Database &db, ";
         int index = 0;
         layout.for_each([&](const auto &column, const auto &field) {
-                std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
+                std::cout << map_types(field, type_mappings).second << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
                 std::cout << (((++index) < layout.size()) ? ", " : ")\n{\n");
         });
@@ -168,17 +204,9 @@ void emit_update(const std::string &table, const ordered_map<std::string, table_
 
         index = 0;
         filtered_layout.for_each([&](const auto &column, const auto &field) {
-                bool quotes = needs_quotes(field.type);
-
                 std::cout << column << " = ";
 
-                if (quotes)
-                        std::cout << "'";
-
-                std::cout << "\" + xto_string(" << column << ") + \"";
-
-                if (quotes)
-                        std::cout << "'";
+                std::cout << prep_value(field, column, (index + 1) >= layout.size());
 
                 std::cout << (((++index) < filtered_layout.size()) ? ", " : "");
         });
@@ -219,7 +247,7 @@ void emit_save(const std::string &table, const ordered_map<std::string, table_fi
                 param_vec.push_back(column);
                 if (field.is_primary)
                         pk_vec.push_back(column);
-                std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
+                std::cout << map_types(field, type_mappings).second << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
                 std::cout << (((++index) < layout.size()) ? ", " : ")\n{\n");
         });
@@ -257,7 +285,7 @@ void emit_select(const std::string &table, const ordered_map<std::string, table_
         int i = 0;
         std::string part_signature;
         primary_keys.for_each([&](const auto &column, const auto &field) {
-                part_signature += map_types(field.type, type_mappings).cpp + " " + column;
+                part_signature += map_types(field, type_mappings).second + " " + column;
                 part_signature += (((i++) + 1 < primary_keys.size()) ? ", " : ")\n{\n");
         });
 
@@ -311,9 +339,15 @@ void emit_dao_mapper(const std::string &table, const ordered_map<std::string, ta
 
         int index = 0;
         layout.for_each([&](const auto &column, const auto &field) {
-                type_mapping mapping = map_types(field.type, type_mappings);
-                std::cout << "\t\t." << column << " = " << mapping.function << "(PQgetvalue(result, tuple," << (index++)
-                        << "))," << std::endl;
+                type_mapping mapping = map_types(field, type_mappings).first;
+                std::string function = mapping.function + "(PQgetvalue(result, tuple," + std::to_string(index) + "))";
+                std::cout << "\t\t." << column << " = ";
+                if (field.is_nullable)
+                        std::cout << "IFNNULL(" << (index++) << ", " << function << ")," << std::endl;
+                else {
+                        std::cout << function << "," << std::endl;
+                        index++;
+                }
         });
 
         std::cout << "\t};\n}\n\n";
@@ -333,7 +367,7 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
 
         int nFields = PQntuples(res);
 
-        // Whatever the fuck that does ...
+        // Whatever the fuck that does ... (PK checks)
         const std::string pkQuery = "SELECT kcu.column_name "
                                     "FROM information_schema.table_constraints tc "
                                     "JOIN information_schema.key_column_usage kcu "
@@ -363,9 +397,28 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
                 std::string column = PQgetvalue(res, i, 3);
                 std::string type = PQgetvalue(res, i, 7);
 
+                // Check if this column is nullable
+                std::string nullableQuery = "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '"
+                                            + table + "' AND COLUMN_NAME = '" + column + "';";
+
+                PGresult *nullableRes = PQexec(conn, nullableQuery.c_str());
+
+                if (PQresultStatus(pkRes) != PGRES_TUPLES_OK) {
+                        std::cerr << "ERR: Could not query nullable status of table '" << table << "' column '" <<
+                                column << "'";
+                        PQclear(nullableRes);
+                        PQclear(res);
+                        PQclear(pkRes);
+                        return -1;
+                }
+
+                bool nullable = std::strcmp(PQgetvalue(nullableRes, 0, 0), "YES") == 0;
+                PQclear(nullableRes);
+
                 fields.emplace(column, table_field{
                                        .name = column,
                                        .type = type,
+                                       .is_nullable = nullable,
                                        .is_primary = std::ranges::find(primary_keys, column) != primary_keys.end()
                                });
         }
@@ -483,7 +536,7 @@ body:
                         << function.identifier << "'.";
                         return -1;
                 }
-                auto param = function.params.pair_n(nParam ++);
+                auto param = function.params.pair_n(nParam++);
                 bool quotes = needs_quotes(param.second);
 
                 if (quotes)
@@ -541,6 +594,7 @@ void gen_preamble()
                 "#include <libpq-fe.h>\n"
                 "#include <Database.hpp>\n\n"
                 "#define NO_CAST(x) (x)\n"
+                "#define IFNNULL(n, _else) (PQgetisnull(result, tuple, n) ? std::nullopt : std::optional(_else))\n"
                 "[[nodiscard]] inline bool cast_bool(std::string &&str) { return (str == \"true\"); }\n\n"
                 "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }\n"
                 "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }\n\n"
@@ -596,11 +650,11 @@ int main()
                 };
         };
 
-        map_type("text", "std::string", "NO_CAST");
+        map_type("text", "std::string", "std::string");
         map_type("integer", "int", "std::stoi");
-        map_type("uuid", "std::string", "NO_CAST");
+        map_type("uuid", "std::string", "std::string");
         map_type("boolean", "bool", "cast_bool");
-        map_type("float", "float", "NO_CAST");
+        map_type("float", "float", "std::stof");
 
         int status = 0;
 
