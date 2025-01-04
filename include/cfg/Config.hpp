@@ -5,6 +5,7 @@
 #include <functional>
 #include <map>
 #include <crow_all.h>
+#include <ordered_map.hpp>
 #include <util.hpp>
 
 /**
@@ -35,7 +36,7 @@ struct DaoFunction {
         std::string identifier;
         std::string query;
         std::string type_mapping;
-        std::map<std::string, std::string> params;
+        ordered_map<std::string, std::string> params;
 };
 
 /**

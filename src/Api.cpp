@@ -22,16 +22,22 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 {
         CROW_ROUTE(crow, "/login")
                 .methods(crow::HTTPMethod::Post)
-                ([this](const crow::request &req) {
+                ([this](const crow::request &req) -> crow::response {
                         JSON_BODY(body)
                         return login(body);
                 });
 
         CROW_ROUTE(crow, "/register")
                 .methods(crow::HTTPMethod::Post)
-                ([this](const crow::request &req) {
+                ([this](const crow::request &req) -> crow::response {
                         JSON_BODY(body)
                         return user_register(body);
+                });
+
+        CROW_ROUTE(crow, "/scenes")
+                .methods(crow::HTTPMethod::Post)
+                ([this](const crow::request &req) -> crow::response {
+                        return user_get_scenes(req);
                 });
 }
 
@@ -89,6 +95,7 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
         return {200, token};
 }
 
+
 crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
 {
         REQUIRE(body, username, "username");
@@ -126,5 +133,11 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
 
         CROW_LOG_DEBUG << "User registered: '" << username.s() << "'";
 
+        return {200, "OK"};
+}
+
+crow::response MalphasApi::user_get_scenes(const crow::request &req) const
+{
+        // req.middleware_context()
         return {200, "OK"};
 }

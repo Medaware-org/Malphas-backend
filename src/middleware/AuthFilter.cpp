@@ -24,6 +24,8 @@ void AuthFilter::before_handle(crow::request &req, crow::response &res, context 
         if (!get_one_session(db, &s, token))
                 goto unauthorized;
 
+        ctx.user_id = s.user_id;
+
         return;
 
 unauthorized:
