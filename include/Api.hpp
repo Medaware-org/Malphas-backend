@@ -8,9 +8,9 @@
 
 #define JSON_BODY(id)                           \
         auto id = crow::json::load(req.body);   \
-        if (!id) { RETURN_ERR }
+        if (!id) { return crow::response(400, "Could not parse JSON."); }
 
-#define REQUIRE(body, id, path) if (!body.has(path)) { RETURN_ERR } auto id = body[path]
+#define REQUIRE(body, id, path) if (!body.has(path)) { return crow::response(400, "Invalid JSON body"); } auto id = body[path]
 
 #define SESSION_TOKEN_LENGTH 128
 

@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <cfg/Config.hpp>
 #include <libpq-fe.h>
+#include <map>
 #include <tuple>
+#include <ordered_map.hpp>
 
 struct type_mapping {
         std::string cpp; // The C++ type
@@ -55,16 +57,17 @@ type_mapping map_types(const std::string &org, const std::map<std::string, type_
         return iter->second;
 }
 
-void emit_struct(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_struct(const std::string &table, const ordered_map<std::string, table_field> &layout,
                  const std::map<std::string, type_mapping> &type_mappings)
 {
         std::cout << "struct " << table << " {" << std::endl;
-        for (const auto &[column, field]: layout)
+        layout.for_each([&](const auto &column, const auto &field) {
                 std::cout << "\t" << map_types(field.type, type_mappings).cpp << " " << column << ";" << std::endl;
+        });
         std::cout << "};\n\n";
 }
 
-void emit_spread_macro(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_spread_macro(const std::string &table, const ordered_map<std::string, table_field> &layout,
                        const std::map<std::string, type_mapping> &type_mappings)
 {
         std::string upper_table = std::string(table);
@@ -74,20 +77,20 @@ void emit_spread_macro(const std::string &table, const std::map<std::string, tab
 
         std::cout << "#define SPREAD_" << upper_table << "(" << table << "_struct" << ") ";
         int index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 std::cout << table << "_struct." << column;
                 if ((++index) < nFields)
                         std::cout << ", ";
-        }
+        });
         std::cout << std::endl;
 
         index = 0;
         std::cout << "#define SPREAD_" << upper_table << "_PTR(" << table << "_struct" << ") ";
-        for (const auto &[column, type]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 std::cout << table << "_struct->" << column;
                 if ((++index) < nFields)
                         std::cout << ", ";
-        }
+        });
 
         std::cout << "\n\n";
 }
@@ -96,28 +99,28 @@ void emit_spread_macro(const std::string &table, const std::map<std::string, tab
 /*
  * Generate an insert function for a given table
  */
-void emit_insert(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_insert(const std::string &table, const ordered_map<std::string, table_field> &layout,
                  const std::map<std::string, type_mapping> &type_mappings)
 {
         size_t nTuples = layout.size();
 
         std::cout << "[[nodiscard]] inline bool " << table << "_insert(Database &db, ";
         int index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
                 std::cout << (((++index) < layout.size()) ? ", " : ") {\n");
-        }
+        });
 
         std::cout << "\tstd::string query = \"INSERT INTO \\\"" << table << "\\\" (";
         index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 std::cout << column;
                 std::cout << (((++index) < nTuples) ? ", " : ") VALUES (");
-        }
+        });
 
         index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 bool quotes = needs_quotes(field.type);
 
                 if (quotes)
@@ -129,20 +132,19 @@ void emit_insert(const std::string &table, const std::map<std::string, table_fie
                         std::cout << "'";
 
                 std::cout << (((++index) < nTuples) ? ", " : ")\";\n");
-        }
+        });
+
 
         std::cout << "\treturn finalize_op(dao_query(db, query, PGRES_COMMAND_OK));" << std::endl;
         std::cout << "}\n\n";
 }
 
-void emit_update(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_update(const std::string &table, const ordered_map<std::string, table_field> &layout,
                  const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::map<std::string, table_field> filtered_layout;
-        std::copy_if(layout.begin(), layout.end(), std::inserter(filtered_layout, filtered_layout.begin()),
-                     [&](const auto &pair) {
-                             return !pair.second.is_primary;
-                     });
+        ordered_map<std::string, table_field> filtered_layout = layout.filter([&](const auto &k, const auto &v) {
+                return !v.is_primary;
+        });
 
         if (filtered_layout.empty()) {
                 std::cout << "// No update function for '" << table << "': The table only has primary key fields." <<
@@ -150,24 +152,22 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
                 return;
         }
 
-        std::map<std::string, table_field> primary_keys;
-        std::copy_if(layout.begin(), layout.end(), std::inserter(primary_keys, primary_keys.begin()),
-                     [&](const auto &pair) {
-                             return pair.second.is_primary;
-                     });
+        ordered_map<std::string, table_field> primary_keys = layout.filter([&](const auto &k, const auto &v) {
+                return v.is_primary;
+        });
 
         std::cout << "[[nodiscard]] inline bool " << table << "_update(Database &db, ";
         int index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
                 std::cout << (((++index) < layout.size()) ? ", " : ")\n{\n");
-        }
+        });
 
         std::cout << "\tstd::string query = \"UPDATE \\\"" << table << "\\\" SET ";
 
         index = 0;
-        for (const auto &[column, field]: filtered_layout) {
+        filtered_layout.for_each([&](const auto &column, const auto &field) {
                 bool quotes = needs_quotes(field.type);
 
                 std::cout << column << " = ";
@@ -181,11 +181,11 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
                         std::cout << "'";
 
                 std::cout << (((++index) < filtered_layout.size()) ? ", " : "");
-        }
+        });
 
         std::cout << " WHERE ";
         index = 0;
-        for (const auto &[column, field]: primary_keys) {
+        primary_keys.for_each([&](const auto &column, const auto &field) {
                 bool quotes = needs_quotes(field.type);
                 std::cout << column << " = ";
                 if (quotes)
@@ -198,14 +198,15 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
 
                 if ((++index) < primary_keys.size())
                         std::cout << " AND ";
-        }
+        });
+
         std::cout << ";\";" << std::endl;
 
         std::cout << "\treturn finalize_op(dao_query(db, query, PGRES_COMMAND_OK));" << std::endl;
         std::cout << "}\n\n";
 }
 
-void emit_save(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_save(const std::string &table, const ordered_map<std::string, table_field> &layout,
                const std::map<std::string, type_mapping> &type_mappings)
 {
         std::cout << "[[nodiscard]] inline bool " << table << "_save(Database &db, ";
@@ -214,14 +215,14 @@ void emit_save(const std::string &table, const std::map<std::string, table_field
         std::vector<std::string> param_vec;
 
         int index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 param_vec.push_back(column);
                 if (field.is_primary)
                         pk_vec.push_back(column);
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
                         column;
                 std::cout << (((++index) < layout.size()) ? ", " : ")\n{\n");
-        }
+        });
 
         index = 0;
         std::string sequence;
@@ -246,34 +247,31 @@ void emit_save(const std::string &table, const std::map<std::string, table_field
         std::cout << "}\n\n";
 }
 
-void emit_select(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_select(const std::string &table, const ordered_map<std::string, table_field> &layout,
                  const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::map<std::string, table_field> primary_keys;
-        std::copy_if(layout.begin(), layout.end(),
-                     std::inserter(primary_keys, primary_keys.end()),
-                     [&](const std::pair<std::string, table_field> &p) {
-                             return p.second.is_primary;
-                     });
+        ordered_map<std::string, table_field> primary_keys = layout.filter([&](const auto &k, const auto &v) {
+                return v.is_primary;
+        });
 
         int i = 0;
         std::string part_signature;
-        for (auto &[column, field]: primary_keys) {
+        primary_keys.for_each([&](const auto &column, const auto &field) {
                 part_signature += map_types(field.type, type_mappings).cpp + " " + column;
                 part_signature += (((i++) + 1 < primary_keys.size()) ? ", " : ")\n{\n");
-        }
+        });
 
         std::string query_str = "\tstd::string query = \"SELECT * FROM \\\"" + table + "\\\" WHERE ";
 
         i = 0;
-        for (auto &[column, field]: primary_keys) {
+        primary_keys.for_each([&](const auto &column, const auto &field) {
                 bool quote = needs_quotes(field.type);
                 std::string quotes = (quote) ? "'" : "";
                 query_str += column + " = " + quotes + "\" + xto_string(" + column + ")";
                 query_str += (((i++) + 1 < primary_keys.size())
                                       ? ("\"" + quotes + " AND ")
                                       : ((quote ? "+ \"'\";\n" : ";\n")));
-        }
+        });
 
         std::string exec_invoke = "\tPGresult *res = dao_query(db, query, PGRES_TUPLES_OK);\n"
                 "\tif (!res) return false;";
@@ -304,7 +302,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
 /*
  * Generate the mapper for a given relation
  */
-void emit_dao_mapper(const std::string &table, const std::map<std::string, table_field> &layout,
+void emit_dao_mapper(const std::string &table, const ordered_map<std::string, table_field> &layout,
                      const std::map<std::string, type_mapping> &type_mappings)
 {
         std::cout << "[[nodiscard]] inline " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" <<
@@ -312,18 +310,19 @@ void emit_dao_mapper(const std::string &table, const std::map<std::string, table
                 << "\treturn " << table << " {\n";
 
         int index = 0;
-        for (const auto &[column, field]: layout) {
+        layout.for_each([&](const auto &column, const auto &field) {
                 type_mapping mapping = map_types(field.type, type_mappings);
                 std::cout << "\t\t." << column << " = " << mapping.function << "(PQgetvalue(result, tuple," << (index++)
                         << "))," << std::endl;
-        }
+        });
 
         std::cout << "\t};\n}\n\n";
 }
 
 int serialise_table(PGconn *conn, std::string &table, const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::string query = std::format("SELECT * FROM information_schema.columns WHERE table_name = '{}'", table);
+        std::string query = std::format(
+                "SELECT * FROM information_schema.columns WHERE table_name = '{}' ORDER BY ordinal_position;", table);
         PGresult *res = PQexec(conn, query.c_str());
 
         if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -357,16 +356,18 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
         for (int i = 0; i < nPks; i++)
                 primary_keys.push_back(PQgetvalue(pkRes, i, 0));
 
-        std::map<std::string, table_field> fields;
+        ordered_map<std::string, table_field> fields;
+        std::vector<std::string> fields_order;
+
         for (int i = 0; i < nFields; i++) {
                 std::string column = PQgetvalue(res, i, 3);
                 std::string type = PQgetvalue(res, i, 7);
 
-                fields[column] = table_field{
-                        .name = column,
-                        .type = type,
-                        .is_primary = std::ranges::find(primary_keys, column) != primary_keys.end()
-                };
+                fields.emplace(column, table_field{
+                                       .name = column,
+                                       .type = type,
+                                       .is_primary = std::ranges::find(primary_keys, column) != primary_keys.end()
+                               });
         }
 
         PQclear(pkRes);
@@ -442,11 +443,11 @@ int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
         std::cout << ", ";
 
         n = 0;
-        for (const auto &[iden, type]: function.params) {
+        function.params.for_each([&](const auto &iden, const auto &type) {
                 std::cout << type << " " << iden;
                 if (function.params.size() < (n++))
                         std::cout << ", ";
-        }
+        });
 
 body:
         std::cout << ")" << std::endl << "{" << std::endl;
@@ -482,13 +483,13 @@ body:
                         << function.identifier << "'.";
                         return -1;
                 }
-                auto param = std::next(function.params.begin(), (nParam++));
-                bool quotes = needs_quotes(param->second);
+                auto param = function.params.pair_n(nParam ++);
+                bool quotes = needs_quotes(param.second);
 
                 if (quotes)
                         query.append("'");
 
-                query.append("\" + " + param->first);
+                query.append("\" + " + param.first);
 
                 if (pos < rawQuery.size() || quotes)
                         query.append(" + \"");

@@ -9,7 +9,7 @@ bool CfgProperty::operator==(const char *path) const
         return path == (this->section + "." + this->key);
 }
 
-static bool parse_params(const std::string &str, std::map<std::string, std::string> &dst)
+static bool parse_params(const std::string &str, ordered_map<std::string, std::string> &dst)
 {
         std::string paramStr = std::string(str);
 
