@@ -156,8 +156,8 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
 
 crow::response MalphasApi::post_scene(const crow::json::rvalue& body) const
 {
-    REQUIRE(body, author     , "author     ");
-    REQUIRE(body, scene_name , "scene_name ");
+    REQUIRE(body, author     , "author");
+    REQUIRE(body, scene_name , "scene_name");
     REQUIRE(body, description, "description");
 
     std::string author_s = author.s();

@@ -43,6 +43,6 @@ namespace
 {
     std::string scene_toString(const scene& s)
     {
-        return "Scene: Author: " + s.author + ", Description: " + s.description + ", ID: " + s.id + ", Scene Name: " + s.scene_name;
+        return "Scene: ID: " + s.id + ", Author: " + s.author + ", Scene Name: " + s.scene_name + ", Description: " + s.description;
     }
 }
