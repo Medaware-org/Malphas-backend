@@ -175,7 +175,7 @@ crow::response MalphasApi::post_scene(const crow::json::rvalue& body) const
 
     boost::uuids::uuid id = boost::uuids::random_generator()();
 
-    if (!scene_save(db, author_s, description_s, to_string(id), scene_name_s))
+    if (!scene_save(db, to_string(id), author_s, scene_name_s, description_s))
         return { 500, error_dto("Internal error", "Could not create scene") };
 
     CROW_LOG_DEBUG << "Scene registered: '" << scene_name_s << "'";
