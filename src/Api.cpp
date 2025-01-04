@@ -2,7 +2,7 @@
 #include <crow_all.h>
 #include <dao/dao.h>
 #include <middleware/AuthFilter.hpp>
-#include <bcrypt.h>
+#include <Bcrypt.cpp\include\bcrypt.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -15,14 +15,14 @@ template<typename... T>
 void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 {
         CROW_ROUTE(crow, "/login")
-                .methods(crow::HTTPMethod::POST)
+                .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) {
                         JSON_BODY(body)
                         return login(body);
                 });
 
         CROW_ROUTE(crow, "/register")
-                .methods(crow::HTTPMethod::POST)
+                .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) {
                         JSON_BODY(body)
                         return user_register(body);

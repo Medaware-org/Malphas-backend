@@ -35,11 +35,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <string.h>
+#include <string>
 
 #include "node_blf.h"
 
-#include "bcrypt.h"
+#include "Bcrypt.cpp\include\bcrypt.h"
 #include "openbsd.h"
 
 #ifdef _WIN32

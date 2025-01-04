@@ -592,6 +592,8 @@ int main()
         map_type("text", "std::string", "NO_CAST");
         map_type("int", "int", "std::stoi");
         map_type("uuid", "std::string", "NO_CAST");
+        map_type("bool", "bool", "NO_CAST");
+        map_type("float", "float", "NO_CAST");
 
         int status = 0;
 

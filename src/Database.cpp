@@ -122,7 +122,7 @@ bool Database::run_migrations()
                 if (!path_str.ends_with(".sql"))
                         continue;
 
-                std::string filename = path.filename();
+                std::string filename = path.filename().string();
 
                 // The init file is not a migration - let's ignore it.
                 if (filename == "init.sql")

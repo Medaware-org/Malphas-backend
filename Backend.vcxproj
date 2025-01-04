@@ -19,13 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Api.cpp" />
     <ClCompile Include="src\cfg\Config.cpp" />
     <ClCompile Include="src\Database.cpp" />
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\middleware\AuthFilter.cpp" />
+    <ClCompile Include="src\parser.cpp" />
+    <ClCompile Include="src\util.cpp" />
+    <ClCompile Include="vendor\Bcrypt.cpp\src\bcrypt.cpp" />
+    <ClCompile Include="vendor\Bcrypt.cpp\src\blowfish.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Api.hpp" />
     <ClInclude Include="include\cfg\Config.hpp" />
+    <ClInclude Include="include\dao\dao.h" />
     <ClInclude Include="include\Database.hpp" />
+    <ClInclude Include="include\middleware\AuthFilter.hpp" />
+    <ClInclude Include="include\parser.hpp" />
+    <ClInclude Include="include\util.hpp" />
+    <ClInclude Include="vendor\Bcrypt.cpp\include\bcrypt.h" />
+    <ClInclude Include="vendor\Bcrypt.cpp\src\node_blf.h" />
+    <ClInclude Include="vendor\Bcrypt.cpp\src\openbsd.h" />
+    <ClInclude Include="vendor\crow\crow_all.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -112,7 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)/vendor;$(ProjectDir)/vendor/crow;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/vendor;$(ProjectDir)/vendor/crow;$(ProjectDir)/vendor/Bcrypt.cpp/include;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -129,7 +144,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)/vendor;$(ProjectDir)/vendor/crow;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/vendor;$(ProjectDir)/vendor/crow;$(ProjectDir)/vendor/Bcrypt.cpp/include;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -144,7 +159,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)/vendor;$(ProjectDir)/vendor/crow;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -161,7 +176,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)/vendor;$(ProjectDir)/vendor/crow;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
