@@ -22,6 +22,8 @@ add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util
         src/middleware/AuthFilter.cpp src/Api.cpp vendor/Bcrypt.cpp/src/bcrypt.cpp
         vendor/Bcrypt.cpp/src/blowfish.cpp)
 
+target_compile_definitions(malphas PUBLIC __CMAKE_BUILD__)
+
 # --- For Crow SSL support ---
 find_package(OpenSSL REQUIRED)
 
