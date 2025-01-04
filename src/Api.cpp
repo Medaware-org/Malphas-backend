@@ -1,6 +1,5 @@
 #include <Api.hpp>
 #include <crow_all.h>
-#include <dao/dao.h>
 #include <middleware/AuthFilter.hpp>
 #include <Bcrypt.cpp\include\bcrypt.h>
 #include <boost/uuid/uuid.hpp>
@@ -26,6 +25,32 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                 ([this](const crow::request &req) {
                         JSON_BODY(body)
                         return user_register(body);
+                });
+
+        CROW_ROUTE(crow, "/scene")
+            .methods(crow::HTTPMethod::Post)
+            ([this](const crow::request& req) {
+                    JSON_BODY(body);
+                    return post_scene(body);
+                });
+
+        //TODO: extend this to use a wrapping method to incorporate "get_all_scene" and "get_one_scene"
+        CROW_ROUTE(crow, "/scene")
+            .methods(crow::HTTPMethod::Get)
+            ([this](const crow::request& req) {
+                    std::vector<scene> dst;
+                    get_all_scene(db, dst);
+                    std::string res = "Get Scenes: ";
+                    for (scene s : dst)
+                        res += "{ " + scene_toString(s) + "}";
+                    return crow::response(200, res);
+                });
+
+        CROW_ROUTE(crow, "/circuit")
+            .methods(crow::HTTPMethod::Post)
+            ([this](const crow::request& req) {
+                    JSON_BODY(body);
+                    return post_circuit(body);
                 });
 }
 
@@ -121,4 +146,34 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
         CROW_LOG_DEBUG << "User registered: '" << username.s() << "'";
 
         return {200, "OK"};
+}
+
+crow::response MalphasApi::post_scene(const crow::json::rvalue& body) const
+{
+    REQUIRE(body, author     , "author     ");
+    REQUIRE(body, scene_name , "scene_name ");
+    REQUIRE(body, description, "description");
+
+    std::string author_s = author.s();
+    std::string scene_name_s = scene_name.s();
+    std::string description_s = description.s();
+
+    if (author_s.empty() || scene_name_s.empty() || description_s.empty())
+    {
+        CROW_LOG_DEBUG << "PostScene: author and/or scene_name and/or description is/are empty.";
+        return { 400, error_dto("Invalid Credentials", "author and/or scene_name and/or description are empty") };
+    }
+
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    if (!scene_save(db, author_s, description_s, to_string(id), scene_name_s))
+        return { 500, error_dto("Internal error", "Could not create scene") };
+
+    CROW_LOG_DEBUG << "Scene registered: '" << scene_name_s << "'";
+    return { 200, "OK" };
+}
+
+crow::response MalphasApi::post_circuit(const crow::json::rvalue& body) const
+{
+    return crow::response();
 }
