@@ -101,7 +101,7 @@ void emit_insert(const std::string &table, const std::map<std::string, table_fie
 {
         size_t nTuples = layout.size();
 
-        std::cout << "inline bool " << table << "_insert(Database &db, ";
+        std::cout << "[[nodiscard]] inline bool " << table << "_insert(Database &db, ";
         int index = 0;
         for (const auto &[column, field]: layout) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
@@ -123,7 +123,7 @@ void emit_insert(const std::string &table, const std::map<std::string, table_fie
                 if (quotes)
                         std::cout << "'";
 
-                std::cout << "\" + " << column << " + \"";
+                std::cout << "\" + xto_string(" << column << ") + \"";
 
                 if (quotes)
                         std::cout << "'";
@@ -156,7 +156,7 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
                              return pair.second.is_primary;
                      });
 
-        std::cout << "inline bool " << table << "_update(Database &db, ";
+        std::cout << "[[nodiscard]] inline bool " << table << "_update(Database &db, ";
         int index = 0;
         for (const auto &[column, field]: layout) {
                 std::cout << map_types(field.type, type_mappings).cpp << ((field.is_primary) ? " /*PK*/ " : " ") <<
@@ -175,7 +175,7 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
                 if (quotes)
                         std::cout << "'";
 
-                std::cout << "\" + " << column << " + \"";
+                std::cout << "\" + xto_string(" << column << ") + \"";
 
                 if (quotes)
                         std::cout << "'";
@@ -191,7 +191,7 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
                 if (quotes)
                         std::cout << "'";
 
-                std::cout << "\" + " << column << " + \"";
+                std::cout << "\" + xto_string(" << column << ") + \"";
 
                 if (quotes)
                         std::cout << "'";
@@ -208,7 +208,7 @@ void emit_update(const std::string &table, const std::map<std::string, table_fie
 void emit_save(const std::string &table, const std::map<std::string, table_field> &layout,
                const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::cout << "inline bool " << table << "_save(Database &db, ";
+        std::cout << "[[nodiscard]] inline bool " << table << "_save(Database &db, ";
 
         std::vector<std::string> pk_vec;
         std::vector<std::string> param_vec;
@@ -269,7 +269,7 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         for (auto &[column, field]: primary_keys) {
                 bool quote = needs_quotes(field.type);
                 std::string quotes = (quote) ? "'" : "";
-                query_str += column + " = " + quotes + "\" + " + column;
+                query_str += column + " = " + quotes + "\" + xto_string(" + column + ")";
                 query_str += (((i++) + 1 < primary_keys.size())
                                       ? ("\"" + quotes + " AND ")
                                       : ((quote ? "+ \"'\";\n" : ";\n")));
@@ -279,7 +279,8 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
                 "\tif (!res) return false;";
 
         // Single result function
-        std::cout << "inline bool get_one_" << table << "(Database &db, " << table << " *dst, " << part_signature;
+        std::cout << "[[nodiscard]] inline bool get_one_" << table << "(Database &db, " << table << " *dst, " <<
+                part_signature;
         std::cout << query_str;
         std::cout << exec_invoke << std::endl;
         std::cout << "\tif (PQntuples(res) != 1) {\n\t\tPQclear(res);\n\t\treturn false;\n\t}" << std::endl;
@@ -289,7 +290,8 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         std::cout << "}\n\n";
 
         // Get all function
-        std::cout << "inline bool get_all_" << table << "(Database &db, std::vector<" << table << "> &dst)\n{\n";
+        std::cout << "[[nodiscard]] inline bool get_all_" << table << "(Database &db, std::vector<" << table <<
+                "> &dst)\n{\n";
         std::cout << "\tstd::string query = \"SELECT * from \\\"" << table << "\\\"\";" << std::endl;
         std::cout << exec_invoke << std::endl;
         std::cout << "\tdao_map_all<" << table << ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << table <<
@@ -305,7 +307,8 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
 void emit_dao_mapper(const std::string &table, const std::map<std::string, table_field> &layout,
                      const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::cout << "inline " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" << std::endl
+        std::cout << "[[nodiscard]] inline " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" <<
+                std::endl
                 << "\treturn " << table << " {\n";
 
         int index = 0;
@@ -429,7 +432,7 @@ int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
                                           ? (function.type_mapping + " *")
                                           : ("std::vector<" + function.type_mapping + "> &");
 
-        std::cout << "inline bool " << function.identifier << "(Database &db, " << return_type << "dst";
+        std::cout << "[[nodiscard]] inline bool " << function.identifier << "(Database &db, " << return_type << "dst";
 
         int n;
 
@@ -536,7 +539,10 @@ void gen_preamble()
                 "#include <any>\n"
                 "#include <libpq-fe.h>\n"
                 "#include <Database.hpp>\n\n"
-                "#define NO_CAST(x) (x)\n\n"
+                "#define NO_CAST(x) (x)\n"
+                "[[nodiscard]] inline bool cast_bool(std::string &&str) { return (str == \"true\"); }\n\n"
+                "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }\n"
+                "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }\n\n"
                 "inline bool finalize_op(PGresult *res) {\n"
                 "        if (!res)\n"
                 "                return false;\n"
@@ -590,9 +596,9 @@ int main()
         };
 
         map_type("text", "std::string", "NO_CAST");
-        map_type("int", "int", "std::stoi");
+        map_type("integer", "int", "std::stoi");
         map_type("uuid", "std::string", "NO_CAST");
-        map_type("bool", "bool", "NO_CAST");
+        map_type("boolean", "bool", "cast_bool");
         map_type("float", "float", "NO_CAST");
 
         int status = 0;

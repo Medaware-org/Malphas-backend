@@ -1,7 +1,13 @@
 #include <Api.hpp>
 #include <crow_all.h>
 #include <middleware/AuthFilter.hpp>
-#include <Bcrypt.cpp\include\bcrypt.h>
+
+#ifndef __CMAKE_BUILD__
+#include <Bcrypt.cpp/include/bcrypt.h>
+#else
+#include "bcrypt.h"
+#endif
+
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
