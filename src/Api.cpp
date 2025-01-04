@@ -235,5 +235,44 @@ crow::response MalphasApi::post_circuit(const crow::json::rvalue& body) const
 
 crow::response MalphasApi::post_wire(const crow::json::rvalue& body) const
 {
-    return crow::response();
+    REQUIRE(body, source_circuit, "source_circuit");
+    REQUIRE(body, target_circuit, "target_circuit");
+    REQUIRE(body, init_signal, "init_signal");
+    REQUIRE(body, amount_input, "amount_input");
+    REQUIRE(body, amount_output, "amount_output");
+    REQUIRE(body, location, "location");
+
+    std::string source_circuit_s = source_circuit.s();
+    std::string target_circuit_s = target_circuit.s();
+    std::string location_s = location.s();
+    bool init_signal_b = init_signal.b();
+    int amount_input_i = amount_input.i();
+    int amount_output_i = amount_output.i();
+
+    if (source_circuit_s.empty() || target_circuit_s.empty() || location_s.empty())
+    {
+        CROW_LOG_DEBUG << "PostWire: source_circuit and/or target_circuit and/or location is/are empty.";
+        return { 400, error_dto("Invalid Credentials", "source_circuit and/or target_circuit and/or location are empty") };
+    }
+
+    wire wire;
+
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    wire.id = to_string(id);
+    wire.source_circuit = source_circuit_s;
+    wire.target_circuit = target_circuit_s;
+    wire.init_signal = init_signal_b;
+    wire.amount_input = amount_input_i;
+    wire.amount_output = amount_output_i;
+    wire.location = location_s;
+
+    if (!wire_save(db, SPREAD_WIRE(wire)))
+    {
+        CROW_LOG_CRITICAL << "Wire could not be saved!";
+        return { 500, error_dto("Internal error", "Wire could not be stored!") };
+    }
+
+    CROW_LOG_DEBUG << "Wire registered";
+    return { 200, "OK" };
 }
