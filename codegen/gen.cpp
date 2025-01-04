@@ -279,7 +279,8 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
                 "\tif (!res) return false;";
 
         // Single result function
-        std::cout << "[[nodiscard]] inline bool get_one_" << table << "(Database &db, " << table << " *dst, " << part_signature;
+        std::cout << "[[nodiscard]] inline bool get_one_" << table << "(Database &db, " << table << " *dst, " <<
+                part_signature;
         std::cout << query_str;
         std::cout << exec_invoke << std::endl;
         std::cout << "\tif (PQntuples(res) != 1) {\n\t\tPQclear(res);\n\t\treturn false;\n\t}" << std::endl;
@@ -289,7 +290,8 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
         std::cout << "}\n\n";
 
         // Get all function
-        std::cout << "[[nodiscard]] inline bool get_all_" << table << "(Database &db, std::vector<" << table << "> &dst)\n{\n";
+        std::cout << "[[nodiscard]] inline bool get_all_" << table << "(Database &db, std::vector<" << table <<
+                "> &dst)\n{\n";
         std::cout << "\tstd::string query = \"SELECT * from \\\"" << table << "\\\"\";" << std::endl;
         std::cout << exec_invoke << std::endl;
         std::cout << "\tdao_map_all<" << table << ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << table <<
@@ -305,7 +307,8 @@ void emit_select(const std::string &table, const std::map<std::string, table_fie
 void emit_dao_mapper(const std::string &table, const std::map<std::string, table_field> &layout,
                      const std::map<std::string, type_mapping> &type_mappings)
 {
-        std::cout << "[[nodiscard]] inline " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" << std::endl
+        std::cout << "[[nodiscard]] inline " << table << " dao_map_" << table << "(PGresult *result, int tuple) {" <<
+                std::endl
                 << "\treturn " << table << " {\n";
 
         int index = 0;
@@ -538,8 +541,8 @@ void gen_preamble()
                 "#include <Database.hpp>\n\n"
                 "#define NO_CAST(x) (x)\n"
                 "[[nodiscard]] inline bool cast_bool(std::string &&str) { return (str == \"true\"); }\n\n"
-                "template<typename T> [[nodiscard]] inline std::string xto_string(T arg) { return std::to_string(arg); }\n"
-                "template<> [[nodiscard]] inline std::string xto_string(std::string arg) { return arg; }\n\n"
+                "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }\n"
+                "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }\n\n"
                 "inline bool finalize_op(PGresult *res) {\n"
                 "        if (!res)\n"
                 "                return false;\n"

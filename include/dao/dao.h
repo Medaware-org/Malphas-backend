@@ -12,8 +12,8 @@
 #define NO_CAST(x) (x)
 [[nodiscard]] inline bool cast_bool(std::string &&str) { return (str == "true"); }
 
-template<typename T> [[nodiscard]] inline std::string xto_string(T arg) { return std::to_string(arg); }
-template<> [[nodiscard]] inline std::string xto_string(std::string arg) { return arg; }
+template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }
+template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }
 
 inline bool finalize_op(PGresult *res) {
         if (!res)
