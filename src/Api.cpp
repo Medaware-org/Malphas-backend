@@ -45,10 +45,12 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
             .methods(crow::HTTPMethod::Get)
             ([this](const crow::request& req) {
                     std::vector<scene> dst;
-                    get_all_scene(db, dst);
+                    bool returnV = get_all_scene(db, dst);
                     std::string res = "Get Scenes: ";
                     for (scene s : dst)
                         res += "{ " + scene_toString(s) + "}";
+                    if (!returnV)
+                        return crow::response(400, "Error occured while GET scenes");
                     return crow::response(200, res);
                 });
 
