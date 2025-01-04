@@ -60,6 +60,13 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                     JSON_BODY(body);
                     return post_circuit(body);
                 });
+
+        CROW_ROUTE(crow, "/wire")
+            .methods(crow::HTTPMethod::Post)
+            ([this](const crow::request& req) {
+                    JSON_BODY(body);
+                    return post_wire(body);
+                });
 }
 
 template void MalphasApi::register_endpoints<>(crow::App<crow::CORSHandler, AuthFilter> &) const;
@@ -176,13 +183,57 @@ crow::response MalphasApi::post_scene(const crow::json::rvalue& body) const
     boost::uuids::uuid id = boost::uuids::random_generator()();
 
     if (!scene_save(db, to_string(id), author_s, scene_name_s, description_s))
+    {
+        CROW_LOG_CRITICAL << "Could not store scene!";
         return { 500, error_dto("Internal error", "Could not create scene") };
+    }
 
     CROW_LOG_DEBUG << "Scene registered: '" << scene_name_s << "'";
     return { 200, "OK" };
 }
 
 crow::response MalphasApi::post_circuit(const crow::json::rvalue& body) const
+{
+    REQUIRE(body, parent_scene, "parent_scene");
+    REQUIRE(body, location_x, "location_x");
+    REQUIRE(body, location_y, "location_y");
+    REQUIRE(body, gate_type, "gate_type");
+
+    std::string parent_scene_s = parent_scene.s();
+    std::string gate_type_s = gate_type.s();
+    int location_x_i = location_x.i();
+    int location_y_i = location_y.i();
+
+    if (parent_scene_s.empty() || gate_type_s.empty())
+    {
+        CROW_LOG_DEBUG << "PostCircuit: parent_scene and/or gate_type is/are empty.";
+        return { 400, error_dto("Invalid Credentials", "parent_scene and/or gate_type are empty") };
+    }
+
+    circuit circuit;
+
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    circuit.id = to_string(id);
+    circuit.parent_scene = parent_scene_s;
+    circuit.gate_type = gate_type_s;
+    circuit.location_x = location_x_i;
+    circuit.location_y = location_y_i;
+
+    if (body.has("parent_circuit"))
+        circuit.parent_circuit = body["parent_circuit"].s();
+
+    if (!circuit_save(db, SPREAD_CIRCUIT(circuit)))
+    {
+        CROW_LOG_CRITICAL << "Could not store circuit!";
+        return { 500, error_dto("Internal error", "Could not create circuit") };
+    }
+
+    CROW_LOG_DEBUG << "Circuit registered";
+    return { 200, "OK"};
+}
+
+crow::response MalphasApi::post_wire(const crow::json::rvalue& body) const
 {
     return crow::response();
 }

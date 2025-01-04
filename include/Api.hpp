@@ -37,6 +37,8 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response post_circuit(const crow::json::rvalue& body) const;
 
+                [[nodiscard]] crow::response post_wire(const crow::json::rvalue& body) const;
+
 };
 
 namespace
