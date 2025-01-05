@@ -334,7 +334,7 @@ struct wire {
 
 [[nodiscard]] inline bool scene_update_basic(Database &db, std::string new_name, std::string new_description, std::string id, std::string user_id)
 {
-	std::string query = "UPDATE scene s SET s.scene_name = '" + xto_string(new_name) + "', s.description = '" + xto_string(new_description) + "' WHERE s.id = '" + xto_string(id) + "' and s.author = '" + xto_string(user_id) + "';";
+	std::string query = "UPDATE scene SET scene_name = '" + xto_string(new_name) + "', description = '" + xto_string(new_description) + "' WHERE id = '" + xto_string(id) + "' and author = '" + xto_string(user_id) + "';";
 	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
 	if (!res) return false;
 	PQclear(res);
