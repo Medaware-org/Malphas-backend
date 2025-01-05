@@ -18,7 +18,8 @@ bool Database::connect(DbConfig &cfg)
         return connect(cfg.user, cfg.password, cfg.db, cfg.host, cfg.port);
 }
 
-bool Database::connect(const std::string &user, const std::string &password, const std::string &db, const std::string &host, int port)
+bool Database::connect(const std::string &user, const std::string &password, const std::string &db,
+                       const std::string &host, int port)
 {
         std::string conn_str =
                 "user=" + user + " password=" + password + " dbname=" + db + " port=" + std::to_string(port) +
@@ -84,7 +85,8 @@ bool Database::init_migrations()
                 CROW_LOG_CRITICAL << "Encountered error when executing script '" << path << "'";
                 CROW_LOG_CRITICAL << PQresultErrorMessage(res);
                 ok = false;
-        } else CROW_LOG_INFO << "Executed script: " << path;
+        } else
+                CROW_LOG_INFO << "Executed script: " << path;
 
         PQclear(res);
 
@@ -103,14 +105,16 @@ bool Database::run_migrations()
         }
 
         const char *mgr = PQgetvalue(res, 0, 0);
-        int mgr_num = 0;
+        int mgr_num = 1;
 
         if (mgr[0] != '\0')
-                mgr_num = std::stoi(mgr);
+                mgr_num = std::stoi(mgr) + 1;
 
         PQclear(res);
 
         bool migrated = false;
+
+        std::map<int, std::filesystem::path> files;
 
         for (auto &entry: std::filesystem::directory_iterator("migrations")) {
                 if (!entry.is_regular_file())
@@ -119,39 +123,42 @@ bool Database::run_migrations()
                 const auto &path = entry.path();
                 std::string path_str = path.string();
 
+                // The init file is not a migration - let's ignore it.
+                if (path.filename().string() == "init.sql")
+                        continue;
+
                 if (!path_str.ends_with(".sql"))
                         continue;
 
-                std::string filename = path.filename().string();
+                files.emplace(std::stoi(entry.path().filename().string()), path);
+        }
 
-                // The init file is not a migration - let's ignore it.
-                if (filename == "init.sql")
-                        continue;
+        for (int i = mgr_num; i <= files.size(); i++) {
+                auto file = files.find(i);
+                if (file == files.end())
+                        break;
 
-                int number = std::stoi(filename);
+                std::string filename = file->second.filename().string();
+                std::string path = file->second.string();
 
-                if (number != mgr_num + 1)
-                        continue;
-
-                if (!execute_script(path.string().c_str())) {
-                        CROW_LOG_CRITICAL << "Database migration failed on migration #" << number;
+                if (!execute_script(path.c_str())) {
+                        CROW_LOG_CRITICAL << "Database migration failed on migration #" << i;
                         return false;
                 }
 
-                CROW_LOG_INFO << "Ran migration script #" << number << ": " << filename;
+                CROW_LOG_INFO << "Ran migration script #" << i << ": " << filename;
                 migrated = true;
 
-                if (!add_migration_entry(number)) {
+                if (!add_migration_entry(i)) {
                         CROW_LOG_CRITICAL << "Migrations failed due to an error.";
                         return false;
                 }
-
-                mgr_num = number;
         }
 
         if (!migrated) {
                 CROW_LOG_INFO << "No migration scripts were invoked.";
-        } else CROW_LOG_INFO << "Done running migrations.";
+        } else
+                CROW_LOG_INFO << "Done running migrations.";
 
         return true;
 }

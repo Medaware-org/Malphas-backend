@@ -70,10 +70,10 @@ std::string MalphasApi::generate_token() const
 {
         std::string token;
         for (int i = 0; i < SESSION_TOKEN_LENGTH; i++) {
-                char c = 'A' + rand() % ('Z' - 'A');
+                char c = 1 + rand() % 255;
                 token.append(1, c);
         }
-        return token;
+        return bcrypt::generateHash(token);
 }
 
 crow::json::wvalue MalphasApi::error_dto(std::string brief, std::string detail) const
