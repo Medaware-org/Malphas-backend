@@ -15,13 +15,6 @@ auto banner = "  __  __       _       _               \n"
         "                | |                    \n"
         "                |_|                    \n";
 
-template<typename T>
-[[nodiscard]] inline typename std::enable_if<std::is_same<T, std::optional<typename T::value_type> >::value,
-        std::string> xto_string(std::optional<T> &arg)
-{
-        return xto_string(arg.value());
-}
-
 int main()
 {
         std::cout << banner << std::endl;
