@@ -98,12 +98,7 @@ void emit_struct(const std::string &table, const ordered_map<std::string, table_
 {
         std::cout << "struct " << table << " {" << std::endl;
         layout.for_each([&](const auto &column, const auto &field) {
-                std::cout << "\t";
-                if (field.is_nullable)
-                        std::cout << "std::optional<";
-                std::cout << map_types(field, type_mappings).second;
-                if (field.is_nullable)
-                        std::cout << ">";
+                std::cout << "\t" << map_types(field, type_mappings).second;
                 std::cout << " " << column << ";" << std::endl;
         });
         std::cout << "};\n\n";

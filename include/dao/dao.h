@@ -228,7 +228,7 @@ struct circuit {
 	std::string parent_scene;
 	int location_x;
 	int location_y;
-	std::optional<std::optional<std::string>> parent_circuit;
+	std::optional<std::string> parent_circuit;
 	std::string gate_type;
 };
 
