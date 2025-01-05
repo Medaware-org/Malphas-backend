@@ -35,29 +35,18 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 
         CROW_ROUTE(crow, "/scene")
                 .methods(crow::HTTPMethod::Post)
-                ([this](const crow::request &req) {
+                ([&, this](const crow::request &req) {
                         JSON_BODY(body);
-                        return post_scene(body);
+                        AUTH_CONTEXT(ctx)
+                        return post_scene(ctx, body);
                 });
 
         //TODO: extend this to use a wrapping method to incorporate "get_all_scene" and "get_one_scene"
         CROW_ROUTE(crow, "/scene")
                 .methods(crow::HTTPMethod::Get)
-                ([this](const crow::request &req) {
-                        std::vector<scene> dst;
-                        std::vector<crow::json::wvalue> scenes;
-                        if (!get_all_scene(db, dst))
-                                return crow::response(400, "Error occured while GET scenes");
-                        for (const auto &scene: dst) {
-                                crow::json::wvalue scene_json;
-                                scene_json["id"] = scene.id;
-                                scene_json["author"] = scene.author;
-                                scene_json["name"] = scene.scene_name;
-                                scene_json["description"] = scene.description;
-                                scenes.push_back(scene_json);
-                        }
-                        crow::json::wvalue response = scenes;
-                        return crow::response(200, response);
+                ([&, this](const crow::request &req) {
+                        AUTH_CONTEXT(ctx)
+                        return get_scene(ctx);
                 });
 
         CROW_ROUTE(crow, "/circuit")
@@ -119,7 +108,7 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
         std::string token = generate_token();
 
         // This should not happen
-        if (!session_save(db, token, usr.id, true)) {
+        if (!session_save(db, token, usr.id, false)) {
                 CROW_LOG_CRITICAL << "Could not create session for user '" << username.s() << "' !";
                 return {500, error_dto("Internal Error", "Could not create session")};
         }
@@ -172,13 +161,12 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
         return {200, "OK"};
 }
 
-crow::response MalphasApi::post_scene(const crow::json::rvalue &body) const
+crow::response MalphasApi::post_scene(const AuthFilter::context &ctx, const crow::json::rvalue &body) const
 {
-        REQUIRE(body, author, "author");
-        REQUIRE(body, scene_name, "scene_name");
+        REQUIRE(body, scene_name, "name");
         REQUIRE(body, description, "description");
 
-        std::string author_s = author.s();
+        std::string author_s = ctx.user_id;
         std::string scene_name_s = scene_name.s();
         std::string description_s = description.s();
 
@@ -196,6 +184,24 @@ crow::response MalphasApi::post_scene(const crow::json::rvalue &body) const
 
         CROW_LOG_DEBUG << "Scene registered: '" << scene_name_s << "'";
         return {200, "OK"};
+}
+
+crow::response MalphasApi::get_scene(const AuthFilter::context &ctx) const
+{
+        std::vector<scene> dst;
+        std::vector<crow::json::wvalue> scenes;
+        if (!get_scenes_of_user(db, dst, ctx.user_id))
+                return {400, "Error occured while GET scenes"};
+        for (const auto &scene: dst) {
+                crow::json::wvalue scene_json;
+                scene_json["id"] = scene.id;
+                scene_json["author"] = scene.author;
+                scene_json["name"] = scene.scene_name;
+                scene_json["description"] = scene.description;
+                scenes.push_back(scene_json);
+        }
+        crow::json::wvalue response = scenes;
+        return {200, response};
 }
 
 crow::response MalphasApi::post_circuit(const crow::json::rvalue &body) const

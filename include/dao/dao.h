@@ -332,6 +332,29 @@ struct wire {
 // Custom Functions
 //
 
+[[nodiscard]] inline bool delete_wire(Database &db, std::string id)
+{
+	std::string query = "DELETE from wire w where w.id = '" + id + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool get_session_user(Database &db, user *dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = '" + user_id + "';";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return true;
+}
+
 [[nodiscard]] inline bool get_user_by_username(Database &db, user *dst, std::string username)
 {
 	std::string query = "SELECT * FROM \"user\" u WHERE u.nickname = '" + username + "';";
@@ -371,20 +394,6 @@ struct wire {
 	std::string query = "UPDATE session s SET s.invalidated = true WHERE s.session_token = '" + session_token + "';";
 	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
 	if (!res) return false;
-	PQclear(res);
-	return true;
-}
-
-[[nodiscard]] inline bool get_session_user(Database &db, user *dst, std::string user_id)
-{
-	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = '" + user_id + "';";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	if (PQntuples(res) != 1) {
-		PQclear(res);
-		return false;
-	}
-	*dst = dao_map_user(res, 0);
 	PQclear(res);
 	return true;
 }
