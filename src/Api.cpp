@@ -95,6 +95,28 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         JSON_BODY(body);
                         return post_wire(body);
                 });
+
+        CROW_ROUTE(crow, "/wire")
+            .methods(crow::HTTPMethod::Get)
+            ([this](const crow::request& req) {
+                    std::vector<wire> dst;
+                    std::vector<crow::json::wvalue> wires;
+                    if (!get_all_wire(db, dst))
+                        return crow::response(400, "Error occured while GET wire");
+                    for (const auto& wire : dst)
+                    {
+                        crow::json::wvalue wire_json;
+                        wire_json["source_circuit"] = wire.source_circuit;
+                        wire_json["target_circuit"] = wire.target_circuit;
+                        wire_json["init_signal"] = wire.init_signal;
+                        wire_json["amount_input"] = wire.amount_input;
+                        wire_json["amount_output"] = wire.amount_output;
+                        wire_json["location"] = wire.location;
+                        wires.push_back(wire_json);
+                    }
+                    crow::json::wvalue response = wires;
+                    return crow::response(200, response);
+                });
 }
 
 template void MalphasApi::register_endpoints<>(crow::App<crow::CORSHandler, AuthFilter> &) const;
