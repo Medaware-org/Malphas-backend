@@ -332,9 +332,114 @@ struct wire {
 // Custom Functions
 //
 
+[[nodiscard]] inline bool scene_update_basic(Database &db, std::string new_name, std::string new_description, std::string id, std::string user_id)
+{
+	std::string query = "UPDATE scene s SET s.scene_name = '" + xto_string(new_name) + "', s.description = '" + xto_string(new_description) + "' WHERE s.id = '" + xto_string(id) + "' and s.author = '" + xto_string(user_id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool scene_delete(Database &db, std::string id, std::string user_id)
+{
+	std::string query = "DELETE FROM scene s WHERE s.id = '" + xto_string(id) + "' AND s.author = '" + xto_string(user_id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool update_circuit_gate_type(Database &db, std::string gate_type, std::string id)
+{
+	std::string query = "update circuit set gate_type = '" + xto_string(gate_type) + "' where id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool update_circuit_location_y(Database &db, int location_y, std::string id)
+{
+	std::string query = "update circuit set location_y = " + xto_string(location_y) + " where id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool update_circuit_location_x(Database &db, int location_x, std::string id)
+{
+	std::string query = "update circuit set location_x = " + xto_string(location_x) + " where id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool update_circuit_location(Database &db, int location_x, int location_y, std::string id)
+{
+	std::string query = "update circuit set location_x = " + xto_string(location_x) + ", location_y = " + xto_string(location_y) + " where id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool get_sessions_of_user(Database &db, std::vector<session> &dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM session s WHERE s.user_id = '" + xto_string(user_id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool delete_circuit(Database &db, std::string id)
+{
+	std::string query = "DELETE from circuit c where c.id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool update_circuit_parent_circuit(Database &db, std::string parent_circuit, std::string id)
+{
+	std::string query = "update circuit set parent_circuit = '" + xto_string(parent_circuit) + "' where id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
 [[nodiscard]] inline bool get_user_by_username(Database &db, user *dst, std::string username)
 {
-	std::string query = "SELECT * FROM \"user\" u WHERE u.nickname = '" + username + "';";
+	std::string query = "SELECT * FROM \"user\" u WHERE u.nickname = '" + xto_string(username) + "';";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool delete_wire(Database &db, std::string id)
+{
+	std::string query = "DELETE from wire w where w.id = '" + xto_string(id) + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool get_session_user(Database &db, user *dst, std::string user_id)
+{
+	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = '" + xto_string(user_id) + "';";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	if (PQntuples(res) != 1) {
@@ -348,7 +453,7 @@ struct wire {
 
 [[nodiscard]] inline bool get_scenes_of_user(Database &db, std::vector<scene> &dst, std::string user_id)
 {
-	std::string query = "SELECT * FROM scene s WHERE s.author = '" + user_id + "';";
+	std::string query = "SELECT * FROM scene s WHERE s.author = '" + xto_string(user_id) + "';";
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	dao_map_all<scene>(res, dst, [](auto *res, auto tuple) { return dao_map_scene(res, tuple); });
@@ -356,35 +461,11 @@ struct wire {
 	return true;
 }
 
-[[nodiscard]] inline bool get_sessions_of_user(Database &db, std::vector<session> &dst, std::string user_id)
-{
-	std::string query = "SELECT * FROM session s WHERE s.user_id = '" + user_id + "';";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
-	PQclear(res);
-	return true;
-}
-
 [[nodiscard]] inline bool invalidate_session(Database &db, std::string session_token)
 {
-	std::string query = "UPDATE session s SET s.invalidated = true WHERE s.session_token = '" + session_token + "';";
+	std::string query = "UPDATE session s SET s.invalidated = true WHERE s.session_token = '" + xto_string(session_token) + "';";
 	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
 	if (!res) return false;
-	PQclear(res);
-	return true;
-}
-
-[[nodiscard]] inline bool get_session_user(Database &db, user *dst, std::string user_id)
-{
-	std::string query = "SELECT * FROM \"user\" u INNER JOIN session s on s.user_id = u.id WHERE s.session_token = '" + user_id + "';";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	if (PQntuples(res) != 1) {
-		PQclear(res);
-		return false;
-	}
-	*dst = dao_map_user(res, 0);
 	PQclear(res);
 	return true;
 }

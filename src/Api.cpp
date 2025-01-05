@@ -11,6 +11,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <utility>
 
 MalphasApi::MalphasApi(Database &db) : db(db)
 {
@@ -35,29 +36,34 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 
         CROW_ROUTE(crow, "/scene")
                 .methods(crow::HTTPMethod::Post)
-                ([this](const crow::request &req) {
+                ([&, this](const crow::request &req) {
                         JSON_BODY(body);
-                        return post_scene(body);
+                        AUTH_CONTEXT(ctx)
+                        return post_scene(ctx, body);
                 });
 
         //TODO: extend this to use a wrapping method to incorporate "get_all_scene" and "get_one_scene"
         CROW_ROUTE(crow, "/scene")
                 .methods(crow::HTTPMethod::Get)
-                ([this](const crow::request &req) {
-                        std::vector<scene> dst;
-                        std::vector<crow::json::wvalue> scenes;
-                        if (!get_all_scene(db, dst))
-                                return crow::response(400, "Error occured while GET scenes");
-                        for (const auto &scene: dst) {
-                                crow::json::wvalue scene_json;
-                                scene_json["id"] = scene.id;
-                                scene_json["author"] = scene.author;
-                                scene_json["name"] = scene.scene_name;
-                                scene_json["description"] = scene.description;
-                                scenes.push_back(scene_json);
-                        }
-                        crow::json::wvalue response = scenes;
-                        return crow::response(200, response);
+                ([&, this](const crow::request &req) {
+                        AUTH_CONTEXT(ctx)
+                        return get_scene(ctx);
+                });
+
+        CROW_ROUTE(crow, "/scene")
+                .methods(crow::HTTPMethod::Delete)
+                ([&, this](const crow::request &req) {
+                        AUTH_CONTEXT(ctx)
+                        QUERY_PARAM(id, "id")
+                        return delete_scene(ctx, id);
+                });
+
+        CROW_ROUTE(crow, "/scene")
+                .methods(crow::HTTPMethod::Put)
+                ([&, this](const crow::request &req) {
+                        AUTH_CONTEXT(ctx)
+                        JSON_BODY(body)
+                        return put_scene(ctx, body);
                 });
 
         CROW_ROUTE(crow, "/circuit")
@@ -68,25 +74,24 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                 });
 
         CROW_ROUTE(crow, "/circuit")
-            .methods(crow::HTTPMethod::Get)
-            ([this](const crow::request& req) {
-                    std::vector<circuit> dst;
-                    std::vector<crow::json::wvalue> circuits;
-                    if (!get_all_circuit(db, dst))
-                        return crow::response(400, "Error occured while GET circuit");
-                    for (const auto& circuit : dst)
-                    {
-                        crow::json::wvalue circuit_json;
-                        circuit_json["id"] = circuit.id;
-                        circuit_json["parent_scene"] = circuit.parent_scene;
-                        circuit_json["location_x"] = circuit.location_x;
-                        circuit_json["location_y"] = circuit.location_y;
-                        circuit_json["parent_circuit"] = circuit.parent_circuit.value_or("");
-                        circuit_json["gate_type"] = circuit.gate_type;
-                        circuits.push_back(circuit_json);
-                    }
-                    crow::json::wvalue response = circuits;
-                    return crow::response(200, response);
+                .methods(crow::HTTPMethod::Get)
+                ([this](const crow::request &req) {
+                        std::vector<circuit> dst;
+                        std::vector<crow::json::wvalue> circuits;
+                        if (!get_all_circuit(db, dst))
+                                return crow::response(400, "Error occured while GET circuit");
+                        for (const auto &circuit: dst) {
+                                crow::json::wvalue circuit_json;
+                                circuit_json["id"] = circuit.id;
+                                circuit_json["parent_scene"] = circuit.parent_scene;
+                                circuit_json["location_x"] = circuit.location_x;
+                                circuit_json["location_y"] = circuit.location_y;
+                                circuit_json["parent_circuit"] = circuit.parent_circuit.value_or("");
+                                circuit_json["gate_type"] = circuit.gate_type;
+                                circuits.push_back(circuit_json);
+                        }
+                        crow::json::wvalue response = circuits;
+                        return crow::response(200, response);
                 });
 
         CROW_ROUTE(crow, "/wire")
@@ -97,25 +102,24 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                 });
 
         CROW_ROUTE(crow, "/wire")
-            .methods(crow::HTTPMethod::Get)
-            ([this](const crow::request& req) {
-                    std::vector<wire> dst;
-                    std::vector<crow::json::wvalue> wires;
-                    if (!get_all_wire(db, dst))
-                        return crow::response(400, "Error occured while GET wire");
-                    for (const auto& wire : dst)
-                    {
-                        crow::json::wvalue wire_json;
-                        wire_json["source_circuit"] = wire.source_circuit;
-                        wire_json["target_circuit"] = wire.target_circuit;
-                        wire_json["init_signal"] = wire.init_signal;
-                        wire_json["amount_input"] = wire.amount_input;
-                        wire_json["amount_output"] = wire.amount_output;
-                        wire_json["location"] = wire.location;
-                        wires.push_back(wire_json);
-                    }
-                    crow::json::wvalue response = wires;
-                    return crow::response(200, response);
+                .methods(crow::HTTPMethod::Get)
+                ([this](const crow::request &req) {
+                        std::vector<wire> dst;
+                        std::vector<crow::json::wvalue> wires;
+                        if (!get_all_wire(db, dst))
+                                return crow::response(400, "Error occured while GET wire");
+                        for (const auto &wire: dst) {
+                                crow::json::wvalue wire_json;
+                                wire_json["source_circuit"] = wire.source_circuit;
+                                wire_json["target_circuit"] = wire.target_circuit;
+                                wire_json["init_signal"] = wire.init_signal;
+                                wire_json["amount_input"] = wire.amount_input;
+                                wire_json["amount_output"] = wire.amount_output;
+                                wire_json["location"] = wire.location;
+                                wires.push_back(wire_json);
+                        }
+                        crow::json::wvalue response = wires;
+                        return crow::response(200, response);
                 });
 }
 
@@ -125,10 +129,10 @@ std::string MalphasApi::generate_token() const
 {
         std::string token;
         for (int i = 0; i < SESSION_TOKEN_LENGTH; i++) {
-                char c = 'A' + rand() % ('Z' - 'A');
+                char c = 1 + rand() % 255;
                 token.append(1, c);
         }
-        return token;
+        return bcrypt::generateHash(token);
 }
 
 crow::json::wvalue MalphasApi::error_dto(std::string brief, std::string detail) const
@@ -150,25 +154,25 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
 
         // User does not exist
         if (!get_user_by_username(db, &usr, username.s())) {
-                CROW_LOG_DEBUG << "Login: User '" << username.s() << "' does not exist.";
+                CROW_LOG_INFO << "Login: User '" << username.s() << "' does not exist.";
                 return {401, errorDto};
         }
 
         // Passwords don't match
         if (!bcrypt::validatePassword(password.s(), usr.passwd_hash)) {
-                CROW_LOG_DEBUG << "Login: Password for user '" << username.s() << "' is incorrect.";
+                CROW_LOG_INFO << "Login: Password for user '" << username.s() << "' is incorrect.";
                 return {401, errorDto};
         }
 
         std::string token = generate_token();
 
         // This should not happen
-        if (!session_save(db, token, usr.id, true)) {
+        if (!session_save(db, token, usr.id, false)) {
                 CROW_LOG_CRITICAL << "Could not create session for user '" << username.s() << "' !";
                 return {500, error_dto("Internal Error", "Could not create session")};
         }
 
-        CROW_LOG_DEBUG << "Session granted for user '" << username.s() << "'";
+        CROW_LOG_INFO << "Session granted for user '" << username.s() << "'";
 
         crow::json::wvalue response;
         response["token"] = token;
@@ -185,7 +189,7 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
         std::string password_s = password.s();
 
         if (username_s.empty() || password_s.empty()) {
-                CROW_LOG_DEBUG << "Register: Username and/or password is/are empty.";
+                CROW_LOG_INFO << "Register: Username and/or password is/are empty.";
                 return {400, error_dto("Invalid Credentials", "Username and/or password are empty")};
         }
 
@@ -193,7 +197,7 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
 
         // Username taken
         if (get_user_by_username(db, &usr, username.s())) {
-                CROW_LOG_DEBUG << "Register: Username '" << username.s() << "' is already taken.";
+                CROW_LOG_INFO << "Register: Username '" << username.s() << "' is already taken.";
                 return {409, error_dto("Username Taken", "A user with this username already exists")};
         }
 
@@ -211,23 +215,22 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
                 return {500, error_dto("Internal error", "Could not create user")};
         }
 
-        CROW_LOG_DEBUG << "User registered: '" << username.s() << "'";
+        CROW_LOG_INFO << "User registered: '" << username.s() << "'";
 
         return {200, "OK"};
 }
 
-crow::response MalphasApi::post_scene(const crow::json::rvalue &body) const
+crow::response MalphasApi::post_scene(const AuthFilter::context &ctx, const crow::json::rvalue &body) const
 {
-        REQUIRE(body, author, "author");
-        REQUIRE(body, scene_name, "scene_name");
+        REQUIRE(body, scene_name, "name");
         REQUIRE(body, description, "description");
 
-        std::string author_s = author.s();
+        std::string author_s = ctx.user_id;
         std::string scene_name_s = scene_name.s();
         std::string description_s = description.s();
 
         if (author_s.empty() || scene_name_s.empty() || description_s.empty()) {
-                CROW_LOG_DEBUG << "PostScene: author and/or scene_name and/or description is/are empty.";
+                CROW_LOG_INFO << "PostScene: author and/or scene_name and/or description is/are empty.";
                 return {400, error_dto("Invalid Credentials", "author and/or scene_name and/or description are empty")};
         }
 
@@ -238,7 +241,51 @@ crow::response MalphasApi::post_scene(const crow::json::rvalue &body) const
                 return {500, error_dto("Internal error", "Could not create scene")};
         }
 
-        CROW_LOG_DEBUG << "Scene registered: '" << scene_name_s << "'";
+        CROW_LOG_INFO << "Scene registered: '" << scene_name_s << "'";
+        return {200, "OK"};
+}
+
+crow::response MalphasApi::get_scene(const AuthFilter::context &ctx) const
+{
+        std::vector<scene> dst;
+        std::vector<crow::json::wvalue> scenes;
+        if (!get_scenes_of_user(db, dst, ctx.user_id))
+                return {400, "Error occured while GET scenes"};
+        for (const auto &scene: dst) {
+                crow::json::wvalue scene_json;
+                scene_json["id"] = scene.id;
+                scene_json["author"] = scene.author;
+                scene_json["name"] = scene.scene_name;
+                scene_json["description"] = scene.description;
+                scenes.push_back(scene_json);
+        }
+        crow::json::wvalue response = scenes;
+        return {200, response};
+}
+
+crow::response MalphasApi::delete_scene(const AuthFilter::context &ctx, std::string id) const
+{
+        if (!scene_delete(db, id, ctx.user_id))
+                return {400, error_dto("Could not delete scene", "The scene '" + id + "' could not be deleted.")};
+
+        CROW_LOG_INFO << "Scene deleted: " << id;
+        return {200, "OK"};
+}
+
+crow::response MalphasApi::put_scene(const AuthFilter::context &ctx, crow::json::rvalue &body) const
+{
+        REQUIRE(body, id, "id");
+        REQUIRE(body, name, "name");
+        REQUIRE(body, description, "description");
+
+        std::string name_s = name.s();
+        std::string description_s = description.s();
+        std::string id_s = id.s();
+
+        if (!scene_update_basic(db, name_s, description_s, id_s, ctx.user_id))
+                return {400, error_dto("Could not update", "Could not update scene")};
+
+        CROW_LOG_DEBUG << "Scene updated: '" << id_s;
         return {200, "OK"};
 }
 
@@ -255,7 +302,7 @@ crow::response MalphasApi::post_circuit(const crow::json::rvalue &body) const
         int location_y_i = location_y.i();
 
         if (parent_scene_s.empty() || gate_type_s.empty()) {
-                CROW_LOG_DEBUG << "PostCircuit: parent_scene and/or gate_type is/are empty.";
+                CROW_LOG_INFO << "PostCircuit: parent_scene and/or gate_type is/are empty.";
                 return {400, error_dto("Invalid Credentials", "parent_scene and/or gate_type are empty")};
         }
 
@@ -277,7 +324,7 @@ crow::response MalphasApi::post_circuit(const crow::json::rvalue &body) const
                 return {500, error_dto("Internal error", "Could not create circuit")};
         }
 
-        CROW_LOG_DEBUG << "Circuit registered";
+        CROW_LOG_INFO << "Circuit registered";
         return {200, "OK"};
 }
 
@@ -298,7 +345,7 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
         int amount_output_i = amount_output.i();
 
         if (source_circuit_s.empty() || target_circuit_s.empty() || location_s.empty()) {
-                CROW_LOG_DEBUG << "PostWire: source_circuit and/or target_circuit and/or location is/are empty.";
+                CROW_LOG_INFO << "PostWire: source_circuit and/or target_circuit and/or location is/are empty.";
                 return {
                         400,
                         error_dto("Invalid Credentials",
@@ -323,6 +370,6 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
                 return {500, error_dto("Internal error", "Wire could not be stored!")};
         }
 
-        CROW_LOG_DEBUG << "Wire registered";
+        CROW_LOG_INFO << "Wire registered";
         return {200, "OK"};
 }

@@ -490,8 +490,9 @@ int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
         n = 0;
         function.params.for_each([&](const auto &iden, const auto &type) {
                 std::cout << type << " " << iden;
-                if (function.params.size() < (n++))
+                if (n + 1 < function.params.size())
                         std::cout << ", ";
+                n++;
         });
 
 body:
@@ -509,6 +510,7 @@ body:
                 pos += 2;
         }
 
+        size_t querySize = rawQuery.size();
         rawQuery = '\"' + rawQuery + '\"';
 
         std::string query;
@@ -534,9 +536,9 @@ body:
                 if (quotes)
                         query.append("'");
 
-                query.append("\" + " + param.first);
+                query.append("\" + xto_string(" + param.first + ")");
 
-                if (pos < rawQuery.size() || quotes)
+                if (pos < querySize || quotes)
                         query.append(" + \"");
 
                 if (quotes)
