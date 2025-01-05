@@ -49,7 +49,7 @@ int main()
                 AuthFilter({"^/", "^/login", "^/register"}, db)
         );
 
-        app.loglevel(crow::LogLevel::Debug);
+        app.loglevel(crow::LogLevel::Info);
 
         const MalphasApi api(db);
         api.register_endpoints(app);

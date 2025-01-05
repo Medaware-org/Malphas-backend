@@ -490,8 +490,9 @@ int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
         n = 0;
         function.params.for_each([&](const auto &iden, const auto &type) {
                 std::cout << type << " " << iden;
-                if (function.params.size() < (n++))
+                if (n + 1 < function.params.size())
                         std::cout << ", ";
+                n++;
         });
 
 body:

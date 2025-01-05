@@ -13,6 +13,8 @@
 
 #define AUTH_CONTEXT(id) AuthFilter::context &id = crow.template get_context<AuthFilter>(req);
 
+#define QUERY_PARAM(id, param) char *id = req.url_params.get(param); if (!id) { return crow::response(400, "Could not parse query params."); }
+
 #define REQUIRE(body, id, path) if (!body.has(path)) { return crow::response(400, "Invalid JSON body"); } auto id = body[path]
 
 #define SESSION_TOKEN_LENGTH 128
@@ -39,6 +41,8 @@ class MalphasApi {
                                                         const crow::json::rvalue &body) const;
 
                 [[nodiscard]] crow::response get_scene(const AuthFilter::context &ctx) const;
+
+                [[nodiscard]] crow::response delete_scene(const AuthFilter::context &ctx, std::string id) const;
 
                 [[nodiscard]] crow::response post_circuit(const crow::json::rvalue &body) const;
 

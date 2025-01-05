@@ -332,6 +332,15 @@ struct wire {
 // Custom Functions
 //
 
+[[nodiscard]] inline bool scene_delete(Database &db, std::string id, std::string user_id)
+{
+	std::string query = "DELETE FROM scene s WHERE s.id = '" + id + "' AND s.author = '" + user_id + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
 [[nodiscard]] inline bool delete_wire(Database &db, std::string id)
 {
 	std::string query = "DELETE from wire w where w.id = '" + id + "';";
