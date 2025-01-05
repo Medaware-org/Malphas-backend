@@ -48,7 +48,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         std::vector<crow::json::wvalue> scenes;
                         if (!get_all_scene(db, dst))
                                 return crow::response(400, "Error occured while GET scenes");
-                        for (const auto &scene : dst) {
+                        for (const auto &scene: dst) {
                                 crow::json::wvalue scene_json;
                                 scene_json["id"] = scene.id;
                                 scene_json["author"] = scene.author;
@@ -119,7 +119,7 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
         std::string token = generate_token();
 
         // This should not happen
-        if (!session_save(db, token, usr.id)) {
+        if (!session_save(db, token, usr.id, true)) {
                 CROW_LOG_CRITICAL << "Could not create session for user '" << username.s() << "' !";
                 return {500, error_dto("Internal Error", "Could not create session")};
         }

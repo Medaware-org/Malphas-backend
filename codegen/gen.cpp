@@ -158,11 +158,13 @@ void emit_insert(const std::string &table, const ordered_map<std::string, table_
 
         index = 0;
         layout.for_each([&](const auto &column, const auto &field) {
-                bool quotes = needs_quotes(field.type);
-
                 std::cout << prep_value(field, column, (index + 1) >= nTuples);
 
-                std::cout << (((++index) < nTuples) ? ", " : ")\";\n");
+                std::cout << (((++index) < nTuples)
+                                      ? ", "
+                                      : ((needs_quotes(field.type)
+                                                  ? std::string("")
+                                                  : std::string("+ \"")) + ")\";\n"));
         });
 
 
@@ -588,8 +590,12 @@ void gen_preamble()
                 "#define NO_CAST(x) (x)\n"
                 "#define IFNNULL(n, _else) (PQgetisnull(result, tuple, n) ? std::nullopt : std::optional(_else))\n"
                 "[[nodiscard]] inline bool cast_bool(std::string &&str) { return (str == \"true\"); }\n\n"
-                "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }\n"
-                "template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }\n\n"
+                "template<typename T>\n"
+                "[[nodiscard]] typename std::enable_if<!std::is_same<T, std::string>::value && !std::is_same<T, bool>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }\n"
+                "template<typename T>\n"
+                "[[nodiscard]] typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }\n"
+                "template<typename T>\n"
+                "[[nodiscard]] typename std::enable_if<std::is_same<T, bool>::value, std::string>::type xto_string(T arg) { return (arg ? \"true\" : \"false\"); }\n\n"
                 "inline bool finalize_op(PGresult *res) {\n"
                 "        if (!res)\n"
                 "                return false;\n"

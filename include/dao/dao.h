@@ -13,8 +13,12 @@
 #define IFNNULL(n, _else) (PQgetisnull(result, tuple, n) ? std::nullopt : std::optional(_else))
 [[nodiscard]] inline bool cast_bool(std::string &&str) { return (str == "true"); }
 
-template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }
-template<typename T> [[nodiscard]] inline typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }
+template<typename T>
+[[nodiscard]] typename std::enable_if<!std::is_same<T, std::string>::value && !std::is_same<T, bool>::value, std::string>::type xto_string(T arg) { return std::to_string(arg); }
+template<typename T>
+[[nodiscard]] typename std::enable_if<std::is_same<T, std::string>::value, std::string>::type xto_string(T arg) { return arg; }
+template<typename T>
+[[nodiscard]] typename std::enable_if<std::is_same<T, bool>::value, std::string>::type xto_string(T arg) { return (arg ? "true" : "false"); }
 
 inline bool finalize_op(PGresult *res) {
         if (!res)
@@ -118,7 +122,7 @@ struct session {
 }
 
 [[nodiscard]] inline bool session_insert(Database &db, std::string /*PK*/ session_token, std::string user_id, std::optional<bool> invalidated) {
-	std::string query = "INSERT INTO \"session\" (session_token, user_id, invalidated) VALUES (" + std::string("'") + xto_string(session_token) + std::string("'") + ", " + std::string("'") + xto_string(user_id) + std::string("'") + ", " + (invalidated ? (xto_string(*invalidated)) : "null"))";
+	std::string query = "INSERT INTO \"session\" (session_token, user_id, invalidated) VALUES (" + std::string("'") + xto_string(session_token) + std::string("'") + ", " + std::string("'") + xto_string(user_id) + std::string("'") + ", " + (invalidated ? (xto_string(*invalidated)) : "null")+ ")";
 	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
