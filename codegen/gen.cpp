@@ -473,7 +473,10 @@ int generate_custom_dao_function(PGconn *conn, const DaoFunction &function)
                                           ? (function.type_mapping + " *")
                                           : ("std::vector<" + function.type_mapping + "> &");
 
-        std::cout << "[[nodiscard]] inline bool " << function.identifier << "(Database &db, " << return_type << "dst";
+        std::cout << "[[nodiscard]] inline bool " << function.identifier << "(Database &db";
+
+        if (!function.type_mapping.empty())
+                std::cout << ", " << return_type << "dst";
 
         int n;
 
@@ -538,14 +541,16 @@ body:
                         query.append("'");
         }
 
+        std::string expected_status = (function.type == COMMAND ? "PGRES_COMMAND_OK" : "PGRES_TUPLES_OK");
+
         std::cout << "\tstd::string query = " << query << ";" << std::endl;
-        std::cout << "\tPGresult *res = dao_query(db, query, PGRES_TUPLES_OK);" << std::endl;
+        std::cout << "\tPGresult *res = dao_query(db, query, " << expected_status << ");" << std::endl;
         std::cout << "\tif (!res) return false;" << std::endl;
 
         if (function.type == SELECT_SINGLE) {
                 std::cout << "\tif (PQntuples(res) != 1) {\n\t\tPQclear(res);\n\t\treturn false;\n\t}" << std::endl;
                 std::cout << "\t*dst = dao_map_" << function.type_mapping << "(res, 0);" << std::endl;
-        } else {
+        } else if (function.type == SELECT_MULTI) {
                 std::cout << "\tdao_map_all<" << function.type_mapping <<
                         ">(res, dst, [](auto *res, auto tuple) { return dao_map_" << function.type_mapping <<
                         "(res, tuple); });" << std::endl;

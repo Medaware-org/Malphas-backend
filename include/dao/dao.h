@@ -106,23 +106,25 @@ struct user {
 struct session {
 	std::string session_token;
 	std::string user_id;
+	std::optional<bool> invalidated;
 };
 
 [[nodiscard]] inline session dao_map_session(PGresult *result, int tuple) {
 	return session {
 		.session_token = std::string(PQgetvalue(result, tuple,0)),
 		.user_id = std::string(PQgetvalue(result, tuple,1)),
+		.invalidated = IFNNULL(2, cast_bool(PQgetvalue(result, tuple,2))),
 	};
 }
 
-[[nodiscard]] inline bool session_insert(Database &db, std::string /*PK*/ session_token, std::string user_id) {
-	std::string query = "INSERT INTO \"session\" (session_token, user_id) VALUES (" + std::string("'") + xto_string(session_token) + std::string("'") + ", " + std::string("'") + xto_string(user_id) + std::string("'") + ")";
+[[nodiscard]] inline bool session_insert(Database &db, std::string /*PK*/ session_token, std::string user_id, std::optional<bool> invalidated) {
+	std::string query = "INSERT INTO \"session\" (session_token, user_id, invalidated) VALUES (" + std::string("'") + xto_string(session_token) + std::string("'") + ", " + std::string("'") + xto_string(user_id) + std::string("'") + ", " + (invalidated ? (xto_string(*invalidated)) : "null"))";
 	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
-[[nodiscard]] inline bool session_update(Database &db, std::string /*PK*/ session_token, std::string user_id)
+[[nodiscard]] inline bool session_update(Database &db, std::string /*PK*/ session_token, std::string user_id, std::optional<bool> invalidated)
 {
-	std::string query = "UPDATE \"session\" SET user_id = " + std::string("'") + xto_string(user_id) + std::string("'") + " WHERE session_token = " + std::string("'") + xto_string(session_token) + std::string("'") + ";";
+	std::string query = "UPDATE \"session\" SET user_id = " + std::string("'") + xto_string(user_id) + std::string("'") + ", invalidated = " + (invalidated ? (xto_string(*invalidated)) : "null") + " WHERE session_token = " + std::string("'") + xto_string(session_token) + std::string("'") + ";";
 	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
 }
 
@@ -150,16 +152,16 @@ struct session {
 	return true;
 }
 
-[[nodiscard]] inline bool session_save(Database &db, std::string /*PK*/ session_token, std::string user_id)
+[[nodiscard]] inline bool session_save(Database &db, std::string /*PK*/ session_token, std::string user_id, std::optional<bool> invalidated)
 {
 	session tmp;
 	if (!get_one_session(db, &tmp, session_token))
-		return session_insert(db, session_token, user_id);
-	return session_update(db, session_token, user_id);
+		return session_insert(db, session_token, user_id, invalidated);
+	return session_update(db, session_token, user_id, invalidated);
 }
 
-#define SPREAD_SESSION(session_struct) session_struct.session_token, session_struct.user_id
-#define SPREAD_SESSION_PTR(session_struct) session_struct->session_token, session_struct->user_id
+#define SPREAD_SESSION(session_struct) session_struct.session_token, session_struct.user_id, session_struct.invalidated
+#define SPREAD_SESSION_PTR(session_struct) session_struct->session_token, session_struct->user_id, session_struct->invalidated
 
 struct scene {
 	std::string id;
@@ -391,6 +393,15 @@ struct wire {
 	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
 	if (!res) return false;
 	dao_map_all<session>(res, dst, [](auto *res, auto tuple) { return dao_map_session(res, tuple); });
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool invalidate_session(Database &db, std::string session_token)
+{
+	std::string query = "UPDATE session s SET s.invalidated = true WHERE s.session_token = '" + session_token + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
 	PQclear(res);
 	return true;
 }

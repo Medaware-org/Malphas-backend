@@ -126,7 +126,9 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
 
         CROW_LOG_DEBUG << "Session granted for user '" << username.s() << "'";
 
-        return {200, token};
+        crow::json::wvalue response;
+        response["token"] = token;
+        return {200, response};
 }
 
 

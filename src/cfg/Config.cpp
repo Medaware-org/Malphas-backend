@@ -53,21 +53,29 @@ bool parse_dao_config(DaoConfig *dst)
                         return false;
                 }
 
-                function.type_mapping = cfg[section.first + ".mapping"];
-                if (function.type_mapping.empty()) {
-                        CROW_LOG_CRITICAL << "The type mapping of function '"
-                        << section.first << "' must not be empty.";
-                        return false;
-                }
-
-                std::string selectType = cfg[section.first + ".type"];
-                if (selectType != "single" && selectType != "multiple") {
+                std::string operationType = cfg[section.first + ".type"];
+                if (operationType != "single" && operationType != "multiple" && operationType != "command") {
                         CROW_LOG_CRITICAL << "The select type of function '"
                         << section.first << "' must either be 'single' or 'multiple'.";
                         return false;
                 }
 
-                function.type = (selectType == "single") ? SELECT_SINGLE : SELECT_MULTI;
+                function.type_mapping = cfg[section.first + ".mapping"];
+                if (function.type_mapping.empty() && operationType != "command") {
+                        CROW_LOG_CRITICAL << "The type mapping of function '"
+                        << section.first << "' must not be empty.";
+                        return false;
+                }
+
+                if (!function.type_mapping.empty() && operationType == "command") {
+                        CROW_LOG_CRITICAL << "The type mapping of function '" << section.first
+                        << "' must be empty, for it represents an operation of type 'command'.";
+                        return false;
+                }
+
+                function.type = (operationType == "single")
+                                        ? SELECT_SINGLE
+                                        : ((operationType == "command") ? COMMAND : SELECT_MULTI);
 
                 std::string paramStr = cfg[section.first + ".params"];
 

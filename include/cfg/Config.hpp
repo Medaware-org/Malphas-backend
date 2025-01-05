@@ -23,16 +23,17 @@ struct CfgProperty {
         bool operator==(const char *path) const;
 };
 
-enum DaoSelectType {
+enum DaoOperationType {
         SELECT_SINGLE,
-        SELECT_MULTI
+        SELECT_MULTI,
+        COMMAND
 };
 
 /**
  * Represents a single SELECT function
  */
 struct DaoFunction {
-        DaoSelectType type;
+        DaoOperationType type;
         std::string identifier;
         std::string query;
         std::string type_mapping;
