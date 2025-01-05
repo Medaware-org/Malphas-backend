@@ -45,13 +45,19 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                 .methods(crow::HTTPMethod::Get)
                 ([this](const crow::request &req) {
                         std::vector<scene> dst;
-                        bool returnV = get_all_scene(db, dst);
-                        std::string res = "Get Scenes: ";
-                        for (scene s: dst)
-                                res += "{ " + scene_toString(s) + "}";
-                        if (!returnV)
+                        std::vector<crow::json::wvalue> scenes;
+                        if (!get_all_scene(db, dst))
                                 return crow::response(400, "Error occured while GET scenes");
-                        return crow::response(200, res);
+                        for (const auto &scene : dst) {
+                                crow::json::wvalue scene_json;
+                                scene_json["id"] = scene.id;
+                                scene_json["author"] = scene.author;
+                                scene_json["name"] = scene.scene_name;
+                                scene_json["description"] = scene.description;
+                                scenes.push_back(scene_json);
+                        }
+                        crow::json::wvalue response = scenes;
+                        return crow::response(200, response);
                 });
 
         CROW_ROUTE(crow, "/circuit")
@@ -75,7 +81,7 @@ std::string MalphasApi::generate_token() const
 {
         std::string token;
         for (int i = 0; i < SESSION_TOKEN_LENGTH; i++) {
-                char c = '(' + rand() % ('Z' - '(');
+                char c = 'A' + rand() % ('Z' - 'A');
                 token.append(1, c);
         }
         return token;

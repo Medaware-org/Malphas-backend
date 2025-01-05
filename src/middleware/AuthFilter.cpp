@@ -14,12 +14,16 @@ void AuthFilter::before_handle(crow::request &req, crow::response &res, context 
 
         std::string token;
         session s;
+        const std::string bearer = "Bearer ";
 
         auto auth = req.headers.find("Authorization");
         if (auth == req.headers.end())
                 goto unauthorized;
 
         token = auth->second;
+
+        if (token.starts_with(bearer))
+                token.erase(0, bearer.length());
 
         if (!get_one_session(db, &s, token))
                 goto unauthorized;
