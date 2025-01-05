@@ -214,15 +214,7 @@ void emit_update(const std::string &table, const ordered_map<std::string, table_
         std::cout << " WHERE ";
         index = 0;
         primary_keys.for_each([&](const auto &column, const auto &field) {
-                bool quotes = needs_quotes(field.type);
-                std::cout << column << " = ";
-                if (quotes)
-                        std::cout << "'";
-
-                std::cout << "\" + xto_string(" << column << ") + \"";
-
-                if (quotes)
-                        std::cout << "'";
+                std::cout << column << " = " << prep_value(field, column, index + 1 >= primary_keys.size());
 
                 if ((++index) < primary_keys.size())
                         std::cout << " AND ";
