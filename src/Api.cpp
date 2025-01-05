@@ -1,6 +1,5 @@
 #include <Api.hpp>
 #include <crow_all.h>
-#include <dao/dao.h>
 #include <middleware/AuthFilter.hpp>
 
 #ifndef __CMAKE_BUILD__
@@ -34,10 +33,39 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return user_register(body);
                 });
 
-        CROW_ROUTE(crow, "/scenes")
-                .methods(crow::HTTPMethod::Post)
-                ([this](const crow::request &req) -> crow::response {
-                        return user_get_scenes(req);
+        CROW_ROUTE(crow, "/scene")
+            .methods(crow::HTTPMethod::Post)
+            ([this](const crow::request& req) {
+                    JSON_BODY(body);
+                    return post_scene(body);
+                });
+
+        //TODO: extend this to use a wrapping method to incorporate "get_all_scene" and "get_one_scene"
+        CROW_ROUTE(crow, "/scene")
+            .methods(crow::HTTPMethod::Get)
+            ([this](const crow::request& req) {
+                    std::vector<scene> dst;
+                    bool returnV = get_all_scene(db, dst);
+                    std::string res = "Get Scenes: ";
+                    for (scene s : dst)
+                        res += "{ " + scene_toString(s) + "}";
+                    if (!returnV)
+                        return crow::response(400, "Error occured while GET scenes");
+                    return crow::response(200, res);
+                });
+
+        CROW_ROUTE(crow, "/circuit")
+            .methods(crow::HTTPMethod::Post)
+            ([this](const crow::request& req) {
+                    JSON_BODY(body);
+                    return post_circuit(body);
+                });
+
+        CROW_ROUTE(crow, "/wire")
+            .methods(crow::HTTPMethod::Post)
+            ([this](const crow::request& req) {
+                    JSON_BODY(body);
+                    return post_wire(body);
                 });
 }
 
@@ -136,8 +164,115 @@ crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
         return {200, "OK"};
 }
 
-crow::response MalphasApi::user_get_scenes(const crow::request &req) const
+crow::response MalphasApi::post_scene(const crow::json::rvalue& body) const
 {
-        // req.middleware_context()
-        return {200, "OK"};
+    REQUIRE(body, author     , "author");
+    REQUIRE(body, scene_name , "scene_name");
+    REQUIRE(body, description, "description");
+
+    std::string author_s = author.s();
+    std::string scene_name_s = scene_name.s();
+    std::string description_s = description.s();
+
+    if (author_s.empty() || scene_name_s.empty() || description_s.empty())
+    {
+        CROW_LOG_DEBUG << "PostScene: author and/or scene_name and/or description is/are empty.";
+        return { 400, error_dto("Invalid Credentials", "author and/or scene_name and/or description are empty") };
+    }
+
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    if (!scene_save(db, to_string(id), author_s, scene_name_s, description_s))
+    {
+        CROW_LOG_CRITICAL << "Could not store scene!";
+        return { 500, error_dto("Internal error", "Could not create scene") };
+    }
+
+    CROW_LOG_DEBUG << "Scene registered: '" << scene_name_s << "'";
+    return { 200, "OK" };
+}
+
+crow::response MalphasApi::post_circuit(const crow::json::rvalue& body) const
+{
+    REQUIRE(body, parent_scene, "parent_scene");
+    REQUIRE(body, location_x, "location_x");
+    REQUIRE(body, location_y, "location_y");
+    REQUIRE(body, gate_type, "gate_type");
+
+    std::string parent_scene_s = parent_scene.s();
+    std::string gate_type_s = gate_type.s();
+    int location_x_i = location_x.i();
+    int location_y_i = location_y.i();
+
+    if (parent_scene_s.empty() || gate_type_s.empty())
+    {
+        CROW_LOG_DEBUG << "PostCircuit: parent_scene and/or gate_type is/are empty.";
+        return { 400, error_dto("Invalid Credentials", "parent_scene and/or gate_type are empty") };
+    }
+
+    circuit circuit;
+
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    circuit.id = to_string(id);
+    circuit.parent_scene = parent_scene_s;
+    circuit.gate_type = gate_type_s;
+    circuit.location_x = location_x_i;
+    circuit.location_y = location_y_i;
+
+    if (body.has("parent_circuit"))
+        circuit.parent_circuit = body["parent_circuit"].s();
+
+    if (!circuit_save(db, SPREAD_CIRCUIT(circuit)))
+    {
+        CROW_LOG_CRITICAL << "Could not store circuit!";
+        return { 500, error_dto("Internal error", "Could not create circuit") };
+    }
+
+    CROW_LOG_DEBUG << "Circuit registered";
+    return { 200, "OK"};
+}
+
+crow::response MalphasApi::post_wire(const crow::json::rvalue& body) const
+{
+    REQUIRE(body, source_circuit, "source_circuit");
+    REQUIRE(body, target_circuit, "target_circuit");
+    REQUIRE(body, init_signal, "init_signal");
+    REQUIRE(body, amount_input, "amount_input");
+    REQUIRE(body, amount_output, "amount_output");
+    REQUIRE(body, location, "location");
+
+    std::string source_circuit_s = source_circuit.s();
+    std::string target_circuit_s = target_circuit.s();
+    std::string location_s = location.s();
+    bool init_signal_b = init_signal.b();
+    int amount_input_i = amount_input.i();
+    int amount_output_i = amount_output.i();
+
+    if (source_circuit_s.empty() || target_circuit_s.empty() || location_s.empty())
+    {
+        CROW_LOG_DEBUG << "PostWire: source_circuit and/or target_circuit and/or location is/are empty.";
+        return { 400, error_dto("Invalid Credentials", "source_circuit and/or target_circuit and/or location are empty") };
+    }
+
+    wire wire;
+
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+
+    wire.id = to_string(id);
+    wire.source_circuit = source_circuit_s;
+    wire.target_circuit = target_circuit_s;
+    wire.init_signal = init_signal_b;
+    wire.amount_input = amount_input_i;
+    wire.amount_output = amount_output_i;
+    wire.location = location_s;
+
+    if (!wire_save(db, SPREAD_WIRE(wire)))
+    {
+        CROW_LOG_CRITICAL << "Wire could not be saved!";
+        return { 500, error_dto("Internal error", "Wire could not be stored!") };
+    }
+
+    CROW_LOG_DEBUG << "Wire registered";
+    return { 200, "OK" };
 }

@@ -2,6 +2,7 @@
 
 #include <crow_all.h>
 #include <Database.hpp>
+#include <dao/dao.h>
 
 #define RETURN_ERR return crow::response(400, "Could not parse JSON.");
 
@@ -32,5 +33,18 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response user_register(const crow::json::rvalue &body) const;
 
-                [[nodiscard]] crow::response user_get_scenes(const crow::request &req) const;
+                [[nodiscard]] crow::response post_scene(const crow::json::rvalue& body) const;
+
+                [[nodiscard]] crow::response post_circuit(const crow::json::rvalue& body) const;
+
+                [[nodiscard]] crow::response post_wire(const crow::json::rvalue& body) const;
+
 };
+
+namespace
+{
+    std::string scene_toString(const scene& s)
+    {
+        return "Scene: ID: " + s.id + ", Author: " + s.author + ", Scene Name: " + s.scene_name + ", Description: " + s.description;
+    }
+}
