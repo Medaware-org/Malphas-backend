@@ -58,6 +58,14 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return delete_scene(ctx, id);
                 });
 
+        CROW_ROUTE(crow, "/scene")
+                .methods(crow::HTTPMethod::Put)
+                ([&, this](const crow::request &req) {
+                        AUTH_CONTEXT(ctx)
+                        JSON_BODY(body)
+                        return put_scene(ctx, body);
+                });
+
         CROW_ROUTE(crow, "/circuit")
                 .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) {
@@ -261,6 +269,23 @@ crow::response MalphasApi::delete_scene(const AuthFilter::context &ctx, std::str
                 return {400, error_dto("Could not delete scene", "The scene '" + id + "' could not be deleted.")};
 
         CROW_LOG_INFO << "Scene deleted: " << id;
+        return {200, "OK"};
+}
+
+crow::response MalphasApi::put_scene(const AuthFilter::context &ctx, crow::json::rvalue &body) const
+{
+        REQUIRE(body, id, "id");
+        REQUIRE(body, name, "name");
+        REQUIRE(body, description, "description");
+
+        std::string name_s = name.s();
+        std::string description_s = description.s();
+        std::string id_s = id.s();
+
+        if (!scene_update_basic(db, name_s, description_s, id_s, ctx.user_id))
+                return {400, error_dto("Could not update", "Could not update scene")};
+
+        CROW_LOG_DEBUG << "Scene updated: '" << id_s;
         return {200, "OK"};
 }
 

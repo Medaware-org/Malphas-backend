@@ -341,6 +341,15 @@ struct wire {
 	return true;
 }
 
+[[nodiscard]] inline bool scene_update_basic(Database &db, std::string new_name, std::string new_description, std::string id, std::string user_id)
+{
+	std::string query = "UPDATE scene s SET s.scene_name = '" + new_name + "', s.description = '" + new_description + "' WHERE s.id = '" + id + "' and s.author = '" + user_id + "';";
+	PGresult *res = dao_query(db, query, PGRES_COMMAND_OK);
+	if (!res) return false;
+	PQclear(res);
+	return true;
+}
+
 [[nodiscard]] inline bool delete_wire(Database &db, std::string id)
 {
 	std::string query = "DELETE from wire w where w.id = '" + id + "';";
