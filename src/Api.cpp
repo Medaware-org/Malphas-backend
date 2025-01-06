@@ -20,6 +20,8 @@ MalphasApi::MalphasApi(Database &db) : db(db)
 template<typename... T>
 void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 {
+        /* Authentication */
+
         CROW_ROUTE(crow, "/login")
                 .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) -> crow::response {
@@ -33,6 +35,8 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         JSON_BODY(body)
                         return user_register(body);
                 });
+
+        /* Scenes */
 
         CROW_ROUTE(crow, "/scene")
                 .methods(crow::HTTPMethod::Post)
@@ -89,22 +93,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
         CROW_ROUTE(crow, "/wire")
                 .methods(crow::HTTPMethod::Get)
                 ([this](const crow::request &req) {
-                        std::vector<wire> dst;
-                        std::vector<crow::json::wvalue> wires;
-                        if (!get_all_wire(db, dst))
-                                return crow::response(400, "Error occured while GET wire");
-                        for (const auto &wire: dst) {
-                                crow::json::wvalue wire_json;
-                                wire_json["source_circuit"] = wire.source_circuit;
-                                wire_json["target_circuit"] = wire.target_circuit;
-                                wire_json["init_signal"] = wire.init_signal;
-                                wire_json["amount_input"] = wire.amount_input;
-                                wire_json["amount_output"] = wire.amount_output;
-                                wire_json["location"] = wire.location;
-                                wires.push_back(wire_json);
-                        }
-                        crow::json::wvalue response = wires;
-                        return crow::response(200, response);
+                        return get_wire();
                 });
 }
 
@@ -377,4 +366,24 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
 
         CROW_LOG_INFO << "Wire registered";
         return {200, "OK"};
+}
+
+crow::response MalphasApi::get_wire() const
+{
+        std::vector<wire> dst;
+        std::vector<crow::json::wvalue> wires;
+        if (!get_all_wire(db, dst))
+                return crow::response(400, "Error occurred while GET wire");
+        for (const auto &wire: dst) {
+                crow::json::wvalue wire_json;
+                wire_json["source_circuit"] = wire.source_circuit;
+                wire_json["target_circuit"] = wire.target_circuit;
+                wire_json["init_signal"] = wire.init_signal;
+                wire_json["amount_input"] = wire.amount_input;
+                wire_json["amount_output"] = wire.amount_output;
+                wire_json["location"] = wire.location;
+                wires.push_back(wire_json);
+        }
+        crow::json::wvalue response = wires;
+        return crow::response(200, response);
 }
