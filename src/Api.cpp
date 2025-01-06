@@ -83,7 +83,8 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
         CROW_ROUTE(crow, "/circuit")
                 .methods(crow::HTTPMethod::Get)
                 ([this](const crow::request &req) {
-                        return get_circuit();
+                        QUERY_PARAM(scene, "scene")
+                        return get_circuit(scene);
                 });
 
         /* Wires */
@@ -269,11 +270,11 @@ crow::response MalphasApi::put_scene(const AuthFilter::context &ctx, crow::json:
         return {200, "OK"};
 }
 
-crow::response MalphasApi::get_circuit() const
+crow::response MalphasApi::get_circuit(const std::string &scene) const
 {
         std::vector<circuit> dst;
         std::vector<crow::json::wvalue> circuits;
-        if (!get_all_circuit(db, dst))
+        if (!get_circuits_in_scene(db, dst, scene))
                 return {400, "Error occurred while GET circuit"};
         for (const auto &circuit: dst) {
                 crow::json::wvalue circuit_json;

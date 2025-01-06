@@ -500,6 +500,16 @@ struct wire {
         return true;
 }
 
+[[nodiscard]] inline bool get_circuits_in_scene(Database &db, std::vector<circuit> &dst, std::string scene)
+{
+        std::string query = "SELECT * FROM circuit c WHERE c.parent_scene = '" + xto_string(scene) + "';";
+        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+        if (!res) return false;
+        dao_map_all<circuit>(res, dst, [](auto *res, auto tuple) { return dao_map_circuit(res, tuple); });
+        PQclear(res);
+        return true;
+}
+
 [[nodiscard]] inline bool update_circuit_parent_circuit(Database &db, std::string parent_circuit, std::string id)
 {
         std::string query = "update circuit set parent_circuit = '" + xto_string(parent_circuit) + "' where id = '" +
