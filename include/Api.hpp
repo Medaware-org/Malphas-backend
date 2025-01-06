@@ -29,9 +29,9 @@ class MalphasApi {
                 void register_endpoints(crow::App<T...> &crow) const;
 
         private:
-                [[nodiscard]] std::string generate_token() const;
+                [[nodiscard]] static std::string generate_token();
 
-                [[nodiscard]] crow::json::wvalue error_dto(std::string brief, std::string detail) const;
+                [[nodiscard]] static crow::json::wvalue error_dto(std::string brief, std::string detail);
 
                 [[nodiscard]] crow::response login(const crow::json::rvalue &body) const;
 
@@ -45,6 +45,8 @@ class MalphasApi {
                 [[nodiscard]] crow::response delete_scene(const AuthFilter::context &ctx, std::string id) const;
 
                 [[nodiscard]] crow::response put_scene(const AuthFilter::context &ctx, crow::json::rvalue &body) const;
+
+                [[nodiscard]] crow::response get_circuit() const;
 
                 [[nodiscard]] crow::response post_circuit(const crow::json::rvalue &body) const;
 

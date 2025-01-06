@@ -76,22 +76,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
         CROW_ROUTE(crow, "/circuit")
                 .methods(crow::HTTPMethod::Get)
                 ([this](const crow::request &req) {
-                        std::vector<circuit> dst;
-                        std::vector<crow::json::wvalue> circuits;
-                        if (!get_all_circuit(db, dst))
-                                return crow::response(400, "Error occured while GET circuit");
-                        for (const auto &circuit: dst) {
-                                crow::json::wvalue circuit_json;
-                                circuit_json["id"] = circuit.id;
-                                circuit_json["parent_scene"] = circuit.parent_scene;
-                                circuit_json["location_x"] = circuit.location_x;
-                                circuit_json["location_y"] = circuit.location_y;
-                                circuit_json["parent_circuit"] = circuit.parent_circuit.value_or("");
-                                circuit_json["gate_type"] = circuit.gate_type;
-                                circuits.push_back(circuit_json);
-                        }
-                        crow::json::wvalue response = circuits;
-                        return crow::response(200, response);
+                        return get_circuit();
                 });
 
         CROW_ROUTE(crow, "/wire")
@@ -125,7 +110,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 
 template void MalphasApi::register_endpoints<>(crow::App<crow::CORSHandler, AuthFilter> &) const;
 
-std::string MalphasApi::generate_token() const
+std::string MalphasApi::generate_token()
 {
         std::string token;
         for (int i = 0; i < SESSION_TOKEN_LENGTH; i++) {
@@ -135,7 +120,7 @@ std::string MalphasApi::generate_token() const
         return bcrypt::generateHash(token);
 }
 
-crow::json::wvalue MalphasApi::error_dto(std::string brief, std::string detail) const
+crow::json::wvalue MalphasApi::error_dto(std::string brief, std::string detail)
 {
         crow::json::wvalue result;
         result["summary"] = brief;
@@ -287,6 +272,26 @@ crow::response MalphasApi::put_scene(const AuthFilter::context &ctx, crow::json:
 
         CROW_LOG_DEBUG << "Scene updated: '" << id_s;
         return {200, "OK"};
+}
+
+crow::response MalphasApi::get_circuit() const
+{
+        std::vector<circuit> dst;
+        std::vector<crow::json::wvalue> circuits;
+        if (!get_all_circuit(db, dst))
+                return {400, "Error occurred while GET circuit"};
+        for (const auto &circuit: dst) {
+                crow::json::wvalue circuit_json;
+                circuit_json["id"] = circuit.id;
+                circuit_json["parent_scene"] = circuit.parent_scene;
+                circuit_json["location_x"] = circuit.location_x;
+                circuit_json["location_y"] = circuit.location_y;
+                circuit_json["parent_circuit"] = circuit.parent_circuit.value_or("");
+                circuit_json["gate_type"] = circuit.gate_type;
+                circuits.push_back(circuit_json);
+        }
+        crow::json::wvalue response = circuits;
+        return {200, response};
 }
 
 crow::response MalphasApi::post_circuit(const crow::json::rvalue &body) const
