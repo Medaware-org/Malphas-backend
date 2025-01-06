@@ -258,7 +258,7 @@ crow::response MalphasApi::get_scene(const AuthFilter::context &ctx) const
         return {200, response};
 }
 
-crow::response MalphasApi::delete_scene(const AuthFilter::context &ctx, std::string id) const
+crow::response MalphasApi::delete_scene(const AuthFilter::context &ctx, const std::string& id) const
 {
         if (!scene_delete(db, id, ctx.user_id))
                 return {400, error_dto("Could not delete scene", "The scene '" + id + "' could not be deleted.")};

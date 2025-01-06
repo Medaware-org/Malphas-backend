@@ -42,7 +42,7 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response get_scene(const AuthFilter::context &ctx) const;
 
-                [[nodiscard]] crow::response delete_scene(const AuthFilter::context &ctx, std::string id) const;
+                [[nodiscard]] crow::response delete_scene(const AuthFilter::context &ctx, const std::string& id) const;
 
                 [[nodiscard]] crow::response put_scene(const AuthFilter::context &ctx, crow::json::rvalue &body) const;
 
