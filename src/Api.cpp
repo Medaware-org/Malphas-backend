@@ -12,7 +12,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <utility>
-#include <dao_extras.h>
+#include <dao/dao_extras.h>
 
 MalphasApi::MalphasApi(Database &db) : db(db)
 {

@@ -33,6 +33,7 @@
     <ClInclude Include="include\Api.hpp" />
     <ClInclude Include="include\cfg\Config.hpp" />
     <ClInclude Include="include\dao\dao.h" />
+    <ClInclude Include="include\dao\dao_extras.h" />
     <ClInclude Include="include\Database.hpp" />
     <ClInclude Include="include\middleware\AuthFilter.hpp" />
     <ClInclude Include="include\parser.hpp" />

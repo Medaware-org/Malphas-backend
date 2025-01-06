@@ -77,6 +77,9 @@
     <ClInclude Include="vendor\crow\crow_all.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\dao\dao_extras.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="migrations\3__Create_wires_and_circuit_tables.sql" />
