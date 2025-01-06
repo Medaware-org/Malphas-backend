@@ -94,6 +94,14 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return circuit_delete(id);
                 });
 
+        CROW_ROUTE(crow, "/circuit")
+                .methods(crow::HTTPMethod::Put)
+                ([this](const crow::request& req) {
+                        QUERY_PARAM(id, "id");
+                        JSON_BODY(body);
+                        return put_circuit(id, body);
+                });
+
         /* Wires */
 
         CROW_ROUTE(crow, "/wire")
@@ -116,6 +124,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         QUERY_PARAM(id, "id");
                         return wire_delete(id);
                 });
+
 }
 
 template void MalphasApi::register_endpoints<>(crow::App<crow::CORSHandler, AuthFilter> &) const;
@@ -350,6 +359,32 @@ crow::response MalphasApi::circuit_delete(std::string id) const
 
         CROW_LOG_DEBUG << "Deleted circuit!";
         return {200, "OK"};
+}
+
+crow::response MalphasApi::put_circuit(std::string id, crow::json::rvalue& body) const
+{
+    OPTIONAL(body, location_x, "location_x");
+    OPTIONAL(body, location_y, "location_x");
+    OPTIONAL(body, parent_circuit, "parent_circuit");
+    OPTIONAL(body, gate_type, "gate_type");
+
+    bool success = false;
+
+    if (location_x != nullptr)
+        success = update_circuit_location_x(db, location_x.i(), id);
+    
+    if (location_y != nullptr)
+        success = update_circuit_location_y(db, location_y.i(), id);
+
+    if (parent_circuit != nullptr)
+        success = update_circuit_parent_circuit(db, parent_circuit.s(), id);
+
+    if (gate_type != nullptr)
+        success = update_circuit_gate_type(db, gate_type.s(), id);
+
+
+
+    return { 200, "OK" };
 }
 
 crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
