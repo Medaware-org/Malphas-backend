@@ -12,6 +12,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <utility>
+#include <dao_extras.h>
 
 MalphasApi::MalphasApi(Database &db) : db(db)
 {
@@ -41,7 +42,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
         CROW_ROUTE(crow, "/scene")
                 .methods(crow::HTTPMethod::Post)
                 ([&, this](const crow::request &req) {
-                        JSON_BODY(body);
+                        JSON_BODY(body)
                         AUTH_CONTEXT(ctx)
                         return post_scene(ctx, body);
                 });
@@ -70,10 +71,12 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return put_scene(ctx, body);
                 });
 
+        /* Circuits */
+
         CROW_ROUTE(crow, "/circuit")
                 .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) {
-                        JSON_BODY(body);
+                        JSON_BODY(body)
                         return post_circuit(body);
                 });
 
@@ -83,17 +86,20 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return get_circuit();
                 });
 
+        /* Wires */
+
         CROW_ROUTE(crow, "/wire")
                 .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) {
-                        JSON_BODY(body);
+                        JSON_BODY(body)
                         return post_wire(body);
                 });
 
         CROW_ROUTE(crow, "/wire")
                 .methods(crow::HTTPMethod::Get)
                 ([this](const crow::request &req) {
-                        return get_wire();
+                        QUERY_PARAM(scene, "scene")
+                        return get_wire(scene);
                 });
 }
 
@@ -327,16 +333,16 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
         REQUIRE(body, source_circuit, "source_circuit");
         REQUIRE(body, target_circuit, "target_circuit");
         REQUIRE(body, init_signal, "init_signal");
-        REQUIRE(body, amount_input, "amount_input");
-        REQUIRE(body, amount_output, "amount_output");
+        REQUIRE(body, number_input, "number_input");
+        REQUIRE(body, number_output, "number_output");
         REQUIRE(body, location, "location");
 
         std::string source_circuit_s = source_circuit.s();
         std::string target_circuit_s = target_circuit.s();
         std::string location_s = location.s();
         bool init_signal_b = init_signal.b();
-        int amount_input_i = amount_input.i();
-        int amount_output_i = amount_output.i();
+        int number_input_i = number_input.i();
+        int number_output_i = number_output.i();
 
         if (source_circuit_s.empty() || target_circuit_s.empty() || location_s.empty()) {
                 CROW_LOG_INFO << "PostWire: source_circuit and/or target_circuit and/or location is/are empty.";
@@ -355,8 +361,8 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
         wire.source_circuit = source_circuit_s;
         wire.target_circuit = target_circuit_s;
         wire.init_signal = init_signal_b;
-        wire.amount_input = amount_input_i;
-        wire.amount_output = amount_output_i;
+        wire.amount_input = number_input_i;
+        wire.amount_output = number_output_i;
         wire.location = location_s;
 
         if (!wire_save(db, SPREAD_WIRE(wire))) {
@@ -368,22 +374,22 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
         return {200, "OK"};
 }
 
-crow::response MalphasApi::get_wire() const
+crow::response MalphasApi::get_wire(const std::string &scene) const
 {
         std::vector<wire> dst;
         std::vector<crow::json::wvalue> wires;
-        if (!get_all_wire(db, dst))
-                return crow::response(400, "Error occurred while GET wire");
+        if (!get_wires_in_scene(db, dst, scene))
+                return {400, "Error occurred while GET wire"};
         for (const auto &wire: dst) {
                 crow::json::wvalue wire_json;
                 wire_json["source_circuit"] = wire.source_circuit;
                 wire_json["target_circuit"] = wire.target_circuit;
                 wire_json["init_signal"] = wire.init_signal;
-                wire_json["amount_input"] = wire.amount_input;
-                wire_json["amount_output"] = wire.amount_output;
+                wire_json["number_input"] = wire.amount_input;
+                wire_json["number_output"] = wire.amount_output;
                 wire_json["location"] = wire.location;
                 wires.push_back(wire_json);
         }
         crow::json::wvalue response = wires;
-        return crow::response(200, response);
+        return {200, response};
 }

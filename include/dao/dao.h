@@ -406,6 +406,19 @@ struct wire {
 // Custom Functions
 //
 
+[[nodiscard]] inline bool get_wires_in_scene(Database &db, std::vector<wire> &dst, std::string scene,
+                                             std::string scene2)
+{
+        std::string query =
+                "SELECT w.* FROM wire w INNER JOIN circuit c1 on c1.id = w.source_circuit INNER JOIN circuit c2 on c2.id = w.target_circuit WHERE c1.parent_scene = '"
+                + xto_string(scene) + "' AND c2.parent_scene = '" + xto_string(scene2) + "';";
+        PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+        if (!res) return false;
+        dao_map_all<wire>(res, dst, [](auto *res, auto tuple) { return dao_map_wire(res, tuple); });
+        PQclear(res);
+        return true;
+}
+
 [[nodiscard]] inline bool scene_update_basic(Database &db, std::string new_name, std::string new_description,
                                              std::string id, std::string user_id)
 {

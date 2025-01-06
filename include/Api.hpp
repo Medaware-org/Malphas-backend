@@ -52,7 +52,7 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response post_wire(const crow::json::rvalue &body) const;
 
-                [[nodiscard]] crow::response get_wire() const;
+                [[nodiscard]] crow::response get_wire(const std::string &scene) const;
 };
 
 namespace {
