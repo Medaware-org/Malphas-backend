@@ -19,7 +19,7 @@
 
 #define REQUIRE(body, id, path) if (!body.has(path)) { return crow::response(400, "Invalid JSON body"); } const auto &id = body[path]
 
-#define OPTIONAL(body, id, path) const auto& id = (body.has(path) ? body[path] : crow::json::rvalue());
+#define OPTIONAL(body, id, path) std::optional<crow::json::rvalue> id = (body.has(path) ? std::optional(body[path]) : std::nullopt);
 
 #define SESSION_TOKEN_LENGTH 128
 
