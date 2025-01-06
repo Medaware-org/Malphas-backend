@@ -89,7 +89,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 
         CROW_ROUTE(crow, "/circuit")
                 .methods(crow::HTTPMethod::Delete)
-                ([this](const crow::request& req) {
+                ([this](const crow::request &req) {
                         QUERY_PARAM(id, "id");
                         return circuit_delete(id);
                 });
@@ -112,7 +112,7 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
 
         CROW_ROUTE(crow, "/wire")
                 .methods(crow::HTTPMethod::Delete)
-                ([this](const crow::request& req) {
+                ([this](const crow::request &req) {
                         QUERY_PARAM(id, "id");
                         return wire_delete(id);
                 });
@@ -258,7 +258,7 @@ crow::response MalphasApi::get_scene(const AuthFilter::context &ctx) const
         return {200, response};
 }
 
-crow::response MalphasApi::delete_scene(const AuthFilter::context &ctx, const std::string& id) const
+crow::response MalphasApi::delete_scene(const AuthFilter::context &ctx, const std::string &id) const
 {
         if (!scene_delete(db, id, ctx.user_id))
                 return {400, error_dto("Could not delete scene", "The scene '" + id + "' could not be deleted.")};
@@ -345,11 +345,11 @@ crow::response MalphasApi::post_circuit(const crow::json::rvalue &body) const
 
 crow::response MalphasApi::circuit_delete(std::string id) const
 {
-    if (!delete_circuit(db, id))
-        return { 400, error_dto("Error deleting", "Could not delete circuit id: '" + id + "'") };
+        if (!delete_circuit(db, id))
+                return {400, error_dto("Error deleting", "Could not delete circuit id: '" + id + "'")};
 
-    CROW_LOG_DEBUG << "Deleted circuit!";
-    return { 200, "OK" };
+        CROW_LOG_DEBUG << "Deleted circuit!";
+        return {200, "OK"};
 }
 
 crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
@@ -368,7 +368,48 @@ crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
         int number_input_i = number_input.i();
         int number_output_i = number_output.i();
 
-        if (source_circuit_s.empty() || target_circuit_s.empty() || location_s.empty()) {
+        //
+        // Check if the wire path is correct
+        //
+
+        auto path = crow::json::load(location_s);
+        bool path_ok = true;
+        std::vector<crow::json::rvalue> points;
+        if (!path || path.t() != crow::json::type::List) {
+                path_ok = false;
+                goto potential_errors;
+        }
+
+        points = path.lo();
+
+        // We need at least a beginning and an end point (so 2)
+        if (points.size() < 2) {
+                path_ok = false;
+                goto potential_errors;
+        }
+
+        for (auto &point: points) {
+                if (point.t() != crow::json::type::List) {
+                        path_ok = false;
+                        goto potential_errors;
+                }
+                std::vector<crow::json::rvalue> coordinates = point.lo();
+
+                // [X, Y]
+                if (coordinates.size() != 2) {
+                        path_ok = false;
+                        goto potential_errors;
+                }
+
+                for (const auto &coordinate: coordinates)
+                        if (coordinate.t() != crow::json::type::Number) {
+                                path_ok = false;
+                                goto potential_errors;
+                        }
+        }
+
+potential_errors:
+        if (source_circuit_s.empty() || target_circuit_s.empty() || location_s.empty() || !path_ok) {
                 CROW_LOG_INFO << "PostWire: source_circuit and/or target_circuit and/or location is/are empty.";
                 return {
                         400,
@@ -412,7 +453,7 @@ crow::response MalphasApi::get_wire(const std::string &scene) const
                 wire_json["init_signal"] = wire.init_signal;
                 wire_json["number_input"] = wire.amount_input;
                 wire_json["number_output"] = wire.amount_output;
-                wire_json["location"] = wire.location;
+                wire_json["location"] = crow::json::load(wire.location);
                 wires.push_back(wire_json);
         }
         crow::json::wvalue response = wires;
@@ -421,9 +462,9 @@ crow::response MalphasApi::get_wire(const std::string &scene) const
 
 crow::response MalphasApi::wire_delete(std::string id) const
 {
-    if (!delete_wire(db, id))
-        return { 400, error_dto("Error deleting", "Could not delete wire with id: '" + id + "'") };
+        if (!delete_wire(db, id))
+                return {400, error_dto("Error deleting", "Could not delete wire with id: '" + id + "'")};
 
-    CROW_LOG_DEBUG << "Deleted wire!";
-    return { 200, "OK" };
+        CROW_LOG_DEBUG << "Deleted wire!";
+        return {200, "OK"};
 }
