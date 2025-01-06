@@ -406,6 +406,7 @@ crow::response MalphasApi::get_wire(const std::string &scene) const
                 return {400, "Error occurred while GET wire"};
         for (const auto &wire: dst) {
                 crow::json::wvalue wire_json;
+                wire_json["id"] = wire.id;
                 wire_json["source_circuit"] = wire.source_circuit;
                 wire_json["target_circuit"] = wire.target_circuit;
                 wire_json["init_signal"] = wire.init_signal;
