@@ -50,9 +50,13 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response post_circuit(const crow::json::rvalue &body) const;
 
+                [[nodiscard]] crow::response circuit_delete(std::string id) const;
+
                 [[nodiscard]] crow::response post_wire(const crow::json::rvalue &body) const;
 
                 [[nodiscard]] crow::response get_wire(const std::string &scene) const;
+
+                [[nodiscard]] crow::response wire_delete(std::string id) const;
 };
 
 namespace {

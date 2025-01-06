@@ -87,6 +87,13 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return get_circuit(scene);
                 });
 
+        CROW_ROUTE(crow, "/circuit")
+                .methods(crow::HTTPMethod::Delete)
+                ([this](const crow::request& req) {
+                        QUERY_PARAM(id, "id");
+                        return circuit_delete(id);
+                });
+
         /* Wires */
 
         CROW_ROUTE(crow, "/wire")
@@ -101,6 +108,13 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                 ([this](const crow::request &req) {
                         QUERY_PARAM(scene, "scene")
                         return get_wire(scene);
+                });
+
+        CROW_ROUTE(crow, "/wire")
+                .methods(crow::HTTPMethod::Delete)
+                ([this](const crow::request& req) {
+                        QUERY_PARAM(id, "id");
+                        return wire_delete(id);
                 });
 }
 
@@ -329,6 +343,15 @@ crow::response MalphasApi::post_circuit(const crow::json::rvalue &body) const
         return {200, "OK"};
 }
 
+crow::response MalphasApi::circuit_delete(std::string id) const
+{
+    if (!delete_circuit(db, id))
+        return { 400, error_dto("Error deleting", "Could not delete circuit id: '" + id + "'") };
+
+    CROW_LOG_DEBUG << "Deleted circuit!";
+    return { 200, "OK" };
+}
+
 crow::response MalphasApi::post_wire(const crow::json::rvalue &body) const
 {
         REQUIRE(body, source_circuit, "source_circuit");
@@ -393,4 +416,13 @@ crow::response MalphasApi::get_wire(const std::string &scene) const
         }
         crow::json::wvalue response = wires;
         return {200, response};
+}
+
+crow::response MalphasApi::wire_delete(std::string id) const
+{
+    if (!delete_wire(db, id))
+        return { 400, error_dto("Error deleting", "Could not delete wire with id: '" + id + "'") };
+
+    CROW_LOG_DEBUG << "Deleted wire!";
+    return { 200, "OK" };
 }
