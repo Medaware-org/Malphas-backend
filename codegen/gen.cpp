@@ -407,8 +407,8 @@ int serialise_table(PGconn *conn, std::string &table, const std::map<std::string
                 fields.emplace(column, table_field{
                                        .name = column,
                                        .type = type,
+                                       .is_primary = std::ranges::find(primary_keys, column) != primary_keys.end(),
                                        .is_nullable = nullable,
-                                       .is_primary = std::ranges::find(primary_keys, column) != primary_keys.end()
                                });
         }
 
