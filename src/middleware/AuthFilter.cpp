@@ -29,6 +29,7 @@ void AuthFilter::before_handle(crow::request &req, crow::response &res, context 
                 goto unauthorized;
 
         ctx.user_id = s.user_id;
+        ctx.token = token;
 
         return;
 

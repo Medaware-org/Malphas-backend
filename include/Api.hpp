@@ -39,6 +39,8 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response login(const crow::json::rvalue &body) const;
 
+                [[nodiscard]] crow::response logout(const AuthFilter::context &ctx) const;
+
                 [[nodiscard]] crow::response user_register(const crow::json::rvalue &body) const;
 
                 [[nodiscard]] crow::response post_scene(const AuthFilter::context &ctx,
@@ -46,7 +48,7 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response get_scene(const AuthFilter::context &ctx) const;
 
-                [[nodiscard]] crow::response delete_scene(const AuthFilter::context &ctx, const std::string& id) const;
+                [[nodiscard]] crow::response delete_scene(const AuthFilter::context &ctx, const std::string &id) const;
 
                 [[nodiscard]] crow::response put_scene(const AuthFilter::context &ctx, crow::json::rvalue &body) const;
 
@@ -56,7 +58,7 @@ class MalphasApi {
 
                 [[nodiscard]] crow::response circuit_delete(std::string id) const;
 
-                [[nodiscard]] crow::response put_circuit(std::string id, crow::json::rvalue& body) const;
+                [[nodiscard]] crow::response put_circuit(std::string id, crow::json::rvalue &body) const;
 
                 [[nodiscard]] crow::response post_wire(const crow::json::rvalue &body) const;
 

@@ -7,6 +7,7 @@
 struct AuthFilter {
         struct context {
                 std::string user_id;
+                std::string token;
         };
 
         explicit AuthFilter(const std::vector<std::string> &public_routes, Database &db);

@@ -30,6 +30,13 @@ void MalphasApi::register_endpoints(crow::App<T...> &crow) const
                         return login(body);
                 });
 
+        CROW_ROUTE(crow, "/logout")
+                .methods(crow::HTTPMethod::Post)
+                ([&, this](const crow::request &req) -> crow::response {
+                        AUTH_CONTEXT(ctx)
+                        return logout(ctx);
+                });
+
         CROW_ROUTE(crow, "/register")
                 .methods(crow::HTTPMethod::Post)
                 ([this](const crow::request &req) -> crow::response {
@@ -182,6 +189,13 @@ crow::response MalphasApi::login(const crow::json::rvalue &body) const
         return {200, response};
 }
 
+[[nodiscard]] crow::response MalphasApi::logout(const AuthFilter::context &ctx) const
+{
+        if (!invalidate_session(this->db, ctx.token))
+                CROW_LOG_CRITICAL << "Could not invalidate session: " << ctx.token;
+
+        return {200, "OK"};
+}
 
 crow::response MalphasApi::user_register(const crow::json::rvalue &body) const
 {
