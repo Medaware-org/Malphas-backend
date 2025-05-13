@@ -19,6 +19,8 @@ if (NOT DEFINED NOCODEGEN)
         	COMMENT "Create the DAO directory and invoke the DAO generator")
 endif()
 
+cmake_policy(SET CMP0167 NEW)
+
 # --- Malphas Backend ---
 add_executable(malphas src/Main.cpp src/Database.cpp src/cfg/Config.cpp src/util.cpp src/parser.cpp
         src/middleware/AuthFilter.cpp src/Api.cpp vendor/Bcrypt.cpp/src/bcrypt.cpp

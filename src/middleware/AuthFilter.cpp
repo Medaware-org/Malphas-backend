@@ -12,30 +12,42 @@ void AuthFilter::before_handle(crow::request &req, crow::response &res, context 
         if (!isSecured(req.url))
                 return;
 
-        std::string token;
-        session s;
-        const std::string bearer = "Bearer ";
+        // Only retrieve user ID; Authorization occurs in the proxy
+        const auto id = req.headers.find("X-User-ID");
+        const auto username = req.headers.find("X-User-Name");
+        user usr;
+        std::string idStr, usernameStr;
 
-        auto auth = req.headers.find("Authorization");
-        if (auth == req.headers.end())
+        if (id == req.headers.end() || username == req.headers.end()) {
+                CROW_LOG_INFO << "A secured endpoint received a faulty request which could not be acted upon.";
                 goto unauthorized;
+        }
 
-        token = auth->second;
+        idStr = id->second;
+        usernameStr = username->second;
 
-        if (token.starts_with(bearer))
-                token.erase(0, bearer.length());
+        if (!get_one_user(db, &usr, idStr)) {
+                if (!user_insert(db, idStr, usernameStr)) {
+                        CROW_LOG_CRITICAL << "Could not register new user: " << idStr;
+                        goto iserr;
+                }
 
-        if (!get_one_session(db, &s, token))
-                goto unauthorized;
+                CROW_LOG_INFO << "Registered " << usernameStr << " (ID " << idStr << "). Good morning.";
+        }
 
-        ctx.user_id = s.user_id;
-        ctx.token = token;
+        ctx.user_id = id->second;
 
         return;
 
 unauthorized:
         res.code = 401;
         res.body = "Unauthorized";
+        res.end();
+        return;
+
+iserr:
+        res.code = 500;
+        res.body = "Internal Server Error.";
         res.end();
 }
 
