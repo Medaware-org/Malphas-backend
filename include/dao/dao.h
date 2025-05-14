@@ -12,130 +12,6 @@
 
 // BEGIN GENERATED CODE
 
-struct user {
-	std::string id;
-	std::string nickname;
-};
-
-[[nodiscard]] inline user dao_map_user(PGresult *result, int tuple) {
-	return user {
-		.id = std::string(PQgetvalue(result, tuple,0)),
-		.nickname = std::string(PQgetvalue(result, tuple,1)),
-	};
-}
-
-[[nodiscard]] inline bool user_insert(Database &db, std::string /*PK*/ id, std::string nickname) {
-	std::string query = "INSERT INTO \"user\" (id, nickname) VALUES (" + std::string("'") + xto_string(id) + std::string("'") + ", " + std::string("'") + xto_string(nickname) + std::string("'") + ")";
-	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
-}
-
-[[nodiscard]] inline bool user_update(Database &db, std::string /*PK*/ id, std::string nickname)
-{
-	std::string query = "UPDATE \"user\" SET nickname = " + std::string("'") + xto_string(nickname) + std::string("'") + " WHERE id = " + std::string("'") + xto_string(id) + std::string("'") + ";";
-	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
-}
-
-[[nodiscard]] inline bool get_one_user(Database &db, user *dst, std::string id)
-{
-	std::string query = "SELECT * FROM \"user\" WHERE id = '" + xto_string(id)+ "'";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	if (PQntuples(res) != 1) {
-		PQclear(res);
-		return false;
-	}
-	*dst = dao_map_user(res, 0);
-	PQclear(res);
-	return true;
-}
-
-[[nodiscard]] inline bool get_all_user(Database &db, std::vector<user> &dst)
-{
-	std::string query = "SELECT * from \"user\"";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	dao_map_all<user>(res, dst, [](auto *res, auto tuple) { return dao_map_user(res, tuple); });
-	PQclear(res);
-	return true;
-}
-
-[[nodiscard]] inline bool user_save(Database &db, std::string /*PK*/ id, std::string nickname)
-{
-	user tmp;
-	if (!get_one_user(db, &tmp, id))
-		return user_insert(db, id, nickname);
-	return user_update(db, id, nickname);
-}
-
-#define SPREAD_USER(user_struct) user_struct.id, user_struct.nickname
-#define SPREAD_USER_PTR(user_struct) user_struct->id, user_struct->nickname
-
-struct circuit {
-	std::string id;
-	std::string parent_scene;
-	int location_x;
-	int location_y;
-	std::optional<std::string> parent_circuit;
-	std::string gate_type;
-};
-
-[[nodiscard]] inline circuit dao_map_circuit(PGresult *result, int tuple) {
-	return circuit {
-		.id = std::string(PQgetvalue(result, tuple,0)),
-		.parent_scene = std::string(PQgetvalue(result, tuple,1)),
-		.location_x = std::stoi(PQgetvalue(result, tuple,2)),
-		.location_y = std::stoi(PQgetvalue(result, tuple,3)),
-		.parent_circuit = IFNNULL(4, std::string(PQgetvalue(result, tuple,4))),
-		.gate_type = std::string(PQgetvalue(result, tuple,5)),
-	};
-}
-
-[[nodiscard]] inline bool circuit_insert(Database &db, std::string /*PK*/ id, std::string parent_scene, int location_x, int location_y, std::optional<std::string> parent_circuit, std::string gate_type) {
-	std::string query = "INSERT INTO \"circuit\" (id, parent_scene, location_x, location_y, parent_circuit, gate_type) VALUES (" + std::string("'") + xto_string(id) + std::string("'") + ", " + std::string("'") + xto_string(parent_scene) + std::string("'") + ", " + xto_string(location_x) + ", " + xto_string(location_y) + ", " + (parent_circuit ? (std::string("'") + xto_string(*parent_circuit) + std::string("'")) : "null") + ", " + std::string("'") + xto_string(gate_type) + std::string("'") + ")";
-	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
-}
-
-[[nodiscard]] inline bool circuit_update(Database &db, std::string /*PK*/ id, std::string parent_scene, int location_x, int location_y, std::optional<std::string> parent_circuit, std::string gate_type)
-{
-	std::string query = "UPDATE \"circuit\" SET parent_scene = " + std::string("'") + xto_string(parent_scene) + std::string("'") + ", location_x = " + xto_string(location_x) + ", location_y = " + xto_string(location_y) + ", parent_circuit = " + (parent_circuit ? (std::string("'") + xto_string(*parent_circuit) + std::string("'")) : "null") + ", gate_type = " + std::string("'") + xto_string(gate_type) + std::string("'") + " WHERE id = " + std::string("'") + xto_string(id) + std::string("'") + ";";
-	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
-}
-
-[[nodiscard]] inline bool get_one_circuit(Database &db, circuit *dst, std::string id)
-{
-	std::string query = "SELECT * FROM \"circuit\" WHERE id = '" + xto_string(id)+ "'";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	if (PQntuples(res) != 1) {
-		PQclear(res);
-		return false;
-	}
-	*dst = dao_map_circuit(res, 0);
-	PQclear(res);
-	return true;
-}
-
-[[nodiscard]] inline bool get_all_circuit(Database &db, std::vector<circuit> &dst)
-{
-	std::string query = "SELECT * from \"circuit\"";
-	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
-	if (!res) return false;
-	dao_map_all<circuit>(res, dst, [](auto *res, auto tuple) { return dao_map_circuit(res, tuple); });
-	PQclear(res);
-	return true;
-}
-
-[[nodiscard]] inline bool circuit_save(Database &db, std::string /*PK*/ id, std::string parent_scene, int location_x, int location_y, std::optional<std::string> parent_circuit, std::string gate_type)
-{
-	circuit tmp;
-	if (!get_one_circuit(db, &tmp, id))
-		return circuit_insert(db, id, parent_scene, location_x, location_y, parent_circuit, gate_type);
-	return circuit_update(db, id, parent_scene, location_x, location_y, parent_circuit, gate_type);
-}
-
-#define SPREAD_CIRCUIT(circuit_struct) circuit_struct.id, circuit_struct.parent_scene, circuit_struct.location_x, circuit_struct.location_y, circuit_struct.parent_circuit, circuit_struct.gate_type
-#define SPREAD_CIRCUIT_PTR(circuit_struct) circuit_struct->id, circuit_struct->parent_scene, circuit_struct->location_x, circuit_struct->location_y, circuit_struct->parent_circuit, circuit_struct->gate_type
-
 struct wire {
 	std::string id;
 	std::string source_circuit;
@@ -204,6 +80,72 @@ struct wire {
 #define SPREAD_WIRE(wire_struct) wire_struct.id, wire_struct.source_circuit, wire_struct.target_circuit, wire_struct.init_signal, wire_struct.amount_input, wire_struct.amount_output, wire_struct.location
 #define SPREAD_WIRE_PTR(wire_struct) wire_struct->id, wire_struct->source_circuit, wire_struct->target_circuit, wire_struct->init_signal, wire_struct->amount_input, wire_struct->amount_output, wire_struct->location
 
+struct circuit {
+	std::string id;
+	std::string parent_scene;
+	int location_x;
+	int location_y;
+	std::optional<std::string> parent_circuit;
+	std::string gate_type;
+};
+
+[[nodiscard]] inline circuit dao_map_circuit(PGresult *result, int tuple) {
+	return circuit {
+		.id = std::string(PQgetvalue(result, tuple,0)),
+		.parent_scene = std::string(PQgetvalue(result, tuple,1)),
+		.location_x = std::stoi(PQgetvalue(result, tuple,2)),
+		.location_y = std::stoi(PQgetvalue(result, tuple,3)),
+		.parent_circuit = IFNNULL(4, std::string(PQgetvalue(result, tuple,4))),
+		.gate_type = std::string(PQgetvalue(result, tuple,5)),
+	};
+}
+
+[[nodiscard]] inline bool circuit_insert(Database &db, std::string /*PK*/ id, std::string parent_scene, int location_x, int location_y, std::optional<std::string> parent_circuit, std::string gate_type) {
+	std::string query = "INSERT INTO \"circuit\" (id, parent_scene, location_x, location_y, parent_circuit, gate_type) VALUES (" + std::string("'") + xto_string(id) + std::string("'") + ", " + std::string("'") + xto_string(parent_scene) + std::string("'") + ", " + xto_string(location_x) + ", " + xto_string(location_y) + ", " + (parent_circuit ? (std::string("'") + xto_string(*parent_circuit) + std::string("'")) : "null") + ", " + std::string("'") + xto_string(gate_type) + std::string("'") + ")";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+}
+
+[[nodiscard]] inline bool circuit_update(Database &db, std::string /*PK*/ id, std::string parent_scene, int location_x, int location_y, std::optional<std::string> parent_circuit, std::string gate_type)
+{
+	std::string query = "UPDATE \"circuit\" SET parent_scene = " + std::string("'") + xto_string(parent_scene) + std::string("'") + ", location_x = " + xto_string(location_x) + ", location_y = " + xto_string(location_y) + ", parent_circuit = " + (parent_circuit ? (std::string("'") + xto_string(*parent_circuit) + std::string("'")) : "null") + ", gate_type = " + std::string("'") + xto_string(gate_type) + std::string("'") + " WHERE id = " + std::string("'") + xto_string(id) + std::string("'") + ";";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+}
+
+[[nodiscard]] inline bool get_one_circuit(Database &db, circuit *dst, std::string id)
+{
+	std::string query = "SELECT * FROM \"circuit\" WHERE id = '" + xto_string(id)+ "'";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_circuit(res, 0);
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool get_all_circuit(Database &db, std::vector<circuit> &dst)
+{
+	std::string query = "SELECT * from \"circuit\"";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<circuit>(res, dst, [](auto *res, auto tuple) { return dao_map_circuit(res, tuple); });
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool circuit_save(Database &db, std::string /*PK*/ id, std::string parent_scene, int location_x, int location_y, std::optional<std::string> parent_circuit, std::string gate_type)
+{
+	circuit tmp;
+	if (!get_one_circuit(db, &tmp, id))
+		return circuit_insert(db, id, parent_scene, location_x, location_y, parent_circuit, gate_type);
+	return circuit_update(db, id, parent_scene, location_x, location_y, parent_circuit, gate_type);
+}
+
+#define SPREAD_CIRCUIT(circuit_struct) circuit_struct.id, circuit_struct.parent_scene, circuit_struct.location_x, circuit_struct.location_y, circuit_struct.parent_circuit, circuit_struct.gate_type
+#define SPREAD_CIRCUIT_PTR(circuit_struct) circuit_struct->id, circuit_struct->parent_scene, circuit_struct->location_x, circuit_struct->location_y, circuit_struct->parent_circuit, circuit_struct->gate_type
+
 struct scene {
 	std::string id;
 	std::string author;
@@ -265,6 +207,64 @@ struct scene {
 
 #define SPREAD_SCENE(scene_struct) scene_struct.id, scene_struct.author, scene_struct.scene_name, scene_struct.description
 #define SPREAD_SCENE_PTR(scene_struct) scene_struct->id, scene_struct->author, scene_struct->scene_name, scene_struct->description
+
+struct user {
+	std::string id;
+	std::string nickname;
+};
+
+[[nodiscard]] inline user dao_map_user(PGresult *result, int tuple) {
+	return user {
+		.id = std::string(PQgetvalue(result, tuple,0)),
+		.nickname = std::string(PQgetvalue(result, tuple,1)),
+	};
+}
+
+[[nodiscard]] inline bool user_insert(Database &db, std::string /*PK*/ id, std::string nickname) {
+	std::string query = "INSERT INTO \"user\" (id, nickname) VALUES (" + std::string("'") + xto_string(id) + std::string("'") + ", " + std::string("'") + xto_string(nickname) + std::string("'") + ")";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+}
+
+[[nodiscard]] inline bool user_update(Database &db, std::string /*PK*/ id, std::string nickname)
+{
+	std::string query = "UPDATE \"user\" SET nickname = " + std::string("'") + xto_string(nickname) + std::string("'") + " WHERE id = " + std::string("'") + xto_string(id) + std::string("'") + ";";
+	return finalize_op(dao_query(db, query, PGRES_COMMAND_OK));
+}
+
+[[nodiscard]] inline bool get_one_user(Database &db, user *dst, std::string id)
+{
+	std::string query = "SELECT * FROM \"user\" WHERE id = '" + xto_string(id)+ "'";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	if (PQntuples(res) != 1) {
+		PQclear(res);
+		return false;
+	}
+	*dst = dao_map_user(res, 0);
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool get_all_user(Database &db, std::vector<user> &dst)
+{
+	std::string query = "SELECT * from \"user\"";
+	PGresult *res = dao_query(db, query, PGRES_TUPLES_OK);
+	if (!res) return false;
+	dao_map_all<user>(res, dst, [](auto *res, auto tuple) { return dao_map_user(res, tuple); });
+	PQclear(res);
+	return true;
+}
+
+[[nodiscard]] inline bool user_save(Database &db, std::string /*PK*/ id, std::string nickname)
+{
+	user tmp;
+	if (!get_one_user(db, &tmp, id))
+		return user_insert(db, id, nickname);
+	return user_update(db, id, nickname);
+}
+
+#define SPREAD_USER(user_struct) user_struct.id, user_struct.nickname
+#define SPREAD_USER_PTR(user_struct) user_struct->id, user_struct->nickname
 
 //
 // Custom Functions
